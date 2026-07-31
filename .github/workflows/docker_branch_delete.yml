@@ -1,0 +1,46 @@
+name: Delete branch container image
+
+on:
+  delete:
+
+jobs:
+  cleanup:
+    if: github.event.ref_type == 'branch' && github.event.ref != 'main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+
+    steps:
+      - name: Find image version
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          PACKAGE: bar
+          TAG: ${{ github.event.ref }}
+        run: |
+          VERSION_ID=$(
+            gh api \
+              /users/$OWNER/packages/container/$PACKAGE/versions \
+              --paginate \
+              --jq ".[] | select(.metadata.container.tags[]? == \"$TAG\") | .id"
+          )
+
+          echo "version_id=$VERSION_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Delete image
+        if: steps.find.outputs.version_id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          PACKAGE: bar
+          VERSION_ID: ${{ steps.find.outputs.version_id }}
+        run: |
+          gh api \
+            -X DELETE \
+            /users/$OWNER/packages/container/$PACKAGE/versions/$VERSION_ID
+
+      - name: No image found
+        if: steps.find.outputs.version_id == ''
+        run: echo "No image found for branch '${{ github.event.ref }}'"

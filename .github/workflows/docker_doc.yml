@@ -1,0 +1,50 @@
+name: Build TwoScale image for validation and doc
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - docs/requirements.txt
+      - docker/Dockerfile.doc
+      - cpp/**
+      - python/**
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Authenticate to GitHub Container Registry
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+
+      # Build and push Docker image
+      - name: Build and push latest (main)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.doc
+          push: true
+          tags: ghcr.io/${{ vars.REPO_NAME_IO }}/bar:latest
+
+      - name: Build and push branch image
+        if: github.ref != 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.doc
+          push: true
+          tags: ghcr.io/${{ vars.REPO_NAME_IO }}/bar:${{ github.ref_name }}
+

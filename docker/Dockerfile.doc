@@ -1,0 +1,23 @@
+FROM ghcr.io/fenics/dolfinx/lab:v0.9.0
+
+WORKDIR /workspace
+
+COPY cpp cpp
+COPY python python
+COPY book/requirements.txt .
+
+# Build and install the C++ library
+RUN cmake -S cpp -B build-cpp \
+       -DCMAKE_BUILD_TYPE=Release \
+       -DCMAKE_INSTALL_PREFIX=/usr/local
+RUN cmake --build build-cpp 
+RUN cmake --install build-cpp
+
+# Build and install the Python package
+WORKDIR /workspace/python
+RUN python3 -m pip install --no-build-isolation .
+
+# only if build went well add requirement for doc
+WORKDIR /workspace
+RUN python3 -m pip install  -r requirements.txt
+
