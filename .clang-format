@@ -1,0 +1,12 @@
+﻿---
+BasedOnStyle: Google
+AlignTrailingComments: 'true'
+AllowShortIfStatementsOnASingleLine: 'true'
+AllowShortLoopsOnASingleLine: 'true'
+BreakBeforeBraces: Allman
+ColumnLimit: '130'
+ConstructorInitializerAllOnOneLineOrOnePerLine: 'true'
+IndentWidth: '3'
+Standard: Cpp11
+
+...
