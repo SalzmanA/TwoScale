@@ -4,7 +4,7 @@ WORKDIR /workspace
 
 COPY cpp cpp
 COPY python python
-COPY book/requirements.txt .
+COPY docs/requirements.txt .
 
 # Build and install the C++ library
 RUN cmake -S cpp -B build-cpp \
