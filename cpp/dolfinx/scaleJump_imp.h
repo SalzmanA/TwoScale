@@ -362,9 +362,9 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
    // This need_balance should be used to simplify
    // For now it avoid rebalancing, considering that refinement will not perturbate the load balancing. In this senario it might
    // be true as enriching all nodes is most of the time associated with refining at least all domain and refining further is also
-   // expect on all domain. It would be suprissing that refining locally is intended in this case.
+   // expect on all domain. It would be surprising that refining locally is intended in this case.
    if (!need_balance)
-      std::cout << "Alternate method would make sence !!!" << std::endl;
+      std::cout << "Alternate method would make sense !!!" << std::endl;
 
 
    // ==============================================
@@ -405,6 +405,8 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
 
       bool agresive_weight=false;
 
+      //std::cout << pid << "agresive_weight   " << agresive_weight << " clustering_dual_graph " << clustering_dual_graph << " accurate_weight " << accurate_weight << std::flush << std::endl;
+
       if (clustering_dual_graph)
       {
          weights.resize(nb_cells, 1);
@@ -441,7 +443,15 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
             // =======================================
             // load balance mesh with agressive weight
             // =======================================
+#ifdef HAS_PARMETIS
             const auto partitioner = dolfinx::graph::parmetis::partitionerWithNodeWeight(weights, 1);
+#else
+#ifdef HAS_KAHIP
+            const auto partitioner = dolfinx::graph::kahip::partitionerWithNodeWeight(weights);
+#else
+#error "PARMETIS or KAHIP required"
+#endif
+#endif
             auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner);
             auto &geo = mesh.geometry();
             const int gdim = geo.dim();
@@ -517,9 +527,9 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
       {
          if (agresive_weight)
          {
-            // ==================================
-            // generated agressive element weight
-            // ==================================
+            // ===================================
+            // generated aggressive element weight
+            // ===================================
             nbw = 1;
             weights.resize(nb_cells, 1);
             auto sg = topo->index_map(dim)->size_global();
@@ -568,7 +578,32 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
          // =================
          // Durty !?!?! creating a new mesh from the given one is simple from an implementation point of view but looks quite
          // costly. Maybe there is a way to do things differently but it is  note obvious from source investigation.
+#ifdef HAS_PARMETIS
          const auto partitioner = dolfinx::graph::parmetis::partitionerWithNodeWeight(weights, nbw);
+#else
+#ifdef HAS_KAHIP
+         if (nbw>1)
+         {
+            // As a last resort, consider using mono weight optimization.
+            // weights = 2*weight1+weight2
+            // 2 : just to be sure that support being well dispatched compare to remaining cells
+            // TODO check 2 is mandatory, maybe 1 is ok
+            if (!pid)
+            {
+               std::cout << "Warning: use mono weight optimization for load balancing" << std::endl;
+               std::cout << "   Use KAHIP but switching to PARMETIS will normally provides better balancing" << std::endl;
+            }
+            auto w1 = std::span<std::int32_t>(weights.begin(), weights.begin() + nb_cells);
+            auto w2 = std::span<std::int32_t>(weights.begin() + nb_cells, weights.end());
+            std::ranges::transform(w1, w2, weights.begin(),
+                                   [](std::int32_t &i, std::int32_t &j) -> std::int32_t { return 2 * i + j; });
+            weights.resize(nb_cells);
+         }
+         const auto partitioner = dolfinx::graph::kahip::partitionerWithNodeWeight(weights);
+#else
+#error "PARMETIS or KAHIP required"
+#endif
+#endif
          auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner);
          // auto cell_part = dolfinx::mesh::create_cell_partitioner();
          auto &geo = mesh.geometry();
