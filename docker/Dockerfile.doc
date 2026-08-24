@@ -11,7 +11,8 @@ COPY docs/requirements.txt .
 # Build and install the C++ library
 RUN cmake -S cpp -B build-cpp \
        -DCMAKE_BUILD_TYPE=Release \
-       -DCMAKE_INSTALL_PREFIX=/usr/local
+       -DCMAKE_INSTALL_PREFIX=/usr/local\
+       -DCMAKE_INSTALL_LIBDIR=/usr/local/lib
 RUN cmake --build build-cpp 
 RUN cmake --install build-cpp
 
