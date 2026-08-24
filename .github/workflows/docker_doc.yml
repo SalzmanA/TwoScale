@@ -37,7 +37,7 @@ jobs:
           context: .
           file: docker/Dockerfile.doc
           push: true
-          tags: ghcr.io/${{ vars.REPO_NAME_IO }}/bar:latest
+          tags: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale:latest
 
       - name: Build and push branch image
         if: github.ref != 'refs/heads/main'
@@ -46,5 +46,5 @@ jobs:
           context: .
           file: docker/Dockerfile.doc
           push: true
-          tags: ghcr.io/${{ vars.REPO_NAME_IO }}/bar:${{ github.ref_name }}
+          tags: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale:${{ github.ref_name }}
 

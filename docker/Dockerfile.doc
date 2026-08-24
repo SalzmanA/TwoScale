@@ -1,4 +1,6 @@
-FROM ghcr.io/fenics/dolfinx/lab:v0.9.0
+#FROM ghcr.io/fenics/dolfinx/lab:v0.9.0
+# dolfinx_mpc include dolfinx
+FROM ghcr.io/jorgensd/dolfinx_mpc:v0.9.3
 
 WORKDIR /workspace
 

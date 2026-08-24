@@ -1,0 +1,15 @@
+diff --git a/src/mat/impls/aij/mpi/mpiov.c b/src/mat/impls/aij/mpi/mpiov.c
+index 533464ac2d3..a2652efdd04 100644
+--- a/src/mat/impls/aij/mpi/mpiov.c
++++ b/src/mat/impls/aij/mpi/mpiov.c
+@@ -2946,7 +2946,9 @@ PetscErrorCode MatSetSeqMats_MPIAIJ(Mat C, IS rowemb, IS dcolemb, IS ocolemb, Ma
+       PetscCall(PetscFree(nz));
+     }
+ 
+-    PetscCall(PetscLayoutGetRange(C->rmap, &rstart, &rend));
++    //PetscCall(PetscLayoutGetRange(C->rmap, &rstart, &rend));
++    // Pierre Jolivet patch
++    PetscCall(PetscLayoutGetRange(C->cmap, &rstart, &rend));
+     shift      = rend - rstart;
+     count      = 0;
+     rowindices = NULL;

@@ -17,7 +17,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
-          PACKAGE: bar
+          PACKAGE: twoscale
           TAG: ${{ github.event.ref }}
         run: |
           VERSION_ID=$(
@@ -34,7 +34,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
-          PACKAGE: bar
+          PACKAGE: twoscale
           VERSION_ID: ${{ steps.find.outputs.version_id }}
         run: |
           gh api \
