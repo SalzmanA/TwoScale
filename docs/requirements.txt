@@ -1,4 +1,7 @@
 jupyter-book<2
+ipykernel
 ipyparallel
 pyvista
 imageio
+breathe
+sympy

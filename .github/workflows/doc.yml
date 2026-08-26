@@ -1,0 +1,70 @@
+name: Documentation
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build TwoScale image for validation and doc"]
+    types:
+      - completed
+  push:
+    paths:
+      - "docs/**"
+      - "!docs/requirements.txt"
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+
+
+jobs:
+  book:
+
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success')
+    
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale:${{
+        github.event_name == 'push'
+        && (github.ref_name == 'main' && 'latest' || github.ref_name)
+        || (github.event.workflow_run.head_branch == 'main' && 'latest' || github.event.workflow_run.head_branch)
+        }}
+
+    steps:
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Generate Doc
+        working-directory: docs
+        run:  make
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build/html
+
+  deploy:
+    needs: book
+    if: >
+      (github.event_name == 'push' &&
+      github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+

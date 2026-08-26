@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0" xmlns:xi="https://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="PO" GridType="Uniform">
+      <Topology TopologyType="Tetrahedron" NumberOfElements="94454" NodesPerElement="4">
+        <DataItem Dimensions="94454 4" NumberType="Int" Format="HDF">pullout_400.h5:/Mesh/PO/topology</DataItem>
+      </Topology>
+      <Geometry GeometryType="XYZ">
+        <DataItem Dimensions="17784 3" Format="HDF">pullout_400.h5:/Mesh/PO/geometry</DataItem>
+      </Geometry>
+    </Grid>
+    <Grid Name="PO_cells" GridType="Uniform">
+      <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@Name='PO']/Geometry)" />
+      <Topology TopologyType="Tetrahedron" NumberOfElements="94454" NodesPerElement="4">
+        <DataItem Dimensions="94454 4" NumberType="Int" Format="HDF">pullout_400.h5:/MeshTags/PO_cells/topology</DataItem>
+      </Topology>
+      <Attribute Name="PO_cells" AttributeType="Scalar" Center="Cell">
+        <DataItem Dimensions="94454 1" Format="HDF">pullout_400.h5:/MeshTags/PO_cells/Values</DataItem>
+      </Attribute>
+    </Grid>
+    <Grid Name="PO_facets" GridType="Uniform">
+      <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@Name='PO']/Geometry)" />
+      <Topology TopologyType="Triangle" NumberOfElements="3238" NodesPerElement="3">
+        <DataItem Dimensions="3238 3" NumberType="Int" Format="HDF">pullout_400.h5:/MeshTags/PO_facets/topology</DataItem>
+      </Topology>
+      <Attribute Name="PO_facets" AttributeType="Scalar" Center="Cell">
+        <DataItem Dimensions="3238 1" Format="HDF">pullout_400.h5:/MeshTags/PO_facets/Values</DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

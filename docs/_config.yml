@@ -1,0 +1,82 @@
+# Book settings
+# Learn more at https://jupyterbook.org/customize/config.html
+
+title: TwoScale
+author: Alexis Salzman
+logo: "logo.png"
+
+# Force re-execution of notebooks on each build.
+# See https://jupyterbook.org/content/execute.html
+execute:
+  execute_notebooks: auto
+  exclude_patterns:
+    - "doc/damaged/pull_out.ipynb"
+    - "doc/elasticity/stepbystep2D.ipynb"
+    - "doc/elasticity/analytical3Delasticity.ipynb"
+  timeout: 240
+#run_in_temp: True
+
+#only_build_toc_files: true
+
+# Define the name of the latex output file for PDF builds
+latex:
+  latex_documents:
+    targetname: book.tex
+
+# Add a bibtex file so that we can create citations
+bibtex_bibfiles:
+  - references.bib
+
+# Information about where the book exists on the web
+repository:
+  url: https://github.com/SalzmanA/TwoScale/tree/main/docs
+  
+#launch_buttons:
+#  notebook_interface: "jupyterlab"
+  #notebook_interface: "classic"  # or "jupyterlab"
+
+# Add GitHub buttons to your book
+# See https://jupyterbook.org/customize/config.html#add-a-link-to-your-repository
+html:
+  use_issues_button: false
+  use_repository_button: true
+
+sphinx:
+  extra_extensions:
+  - sphinx.ext.doctest
+  - sphinx.ext.autodoc
+  - sphinx.ext.autosummary
+  - sphinx.ext.viewcode
+  - breathe
+  config:
+    autosummary_generate: True
+    autosummary_generate_overwrite: True
+    autosummary_imported_members: True
+    autosummary_generate_overwrite: True
+    add_module_names: False
+    breathe_projects: { "baselib": "./doxy/xml/" }
+    breathe_default_project: baselib
+    html_show_copyright: False
+    html_static_path:
+      - "_static"
+    templates_path:
+      - "_templates"
+    html_theme_options:
+      footer_content_items:
+        - "copyright.html"
+
+
+
+#  - sphinx.ext.imgmath
+#    imgmath_use_preview: True
+#    mathjax_path: "/home/salzman/devel/TwoScale/twoscale_doc/javascript/MathJax/node_modules/mathjax-full/js/mathjax.js"
+#    mathjax_path: "/usr/share/javascript/mathjax/MathJax.js"
+#    mathjax_path: "mathjax3.js"
+#    mathjax3_config: {"options":{"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}
+# mathjax_path: "mathjax/tex-chtml.js"
+
+#breathe_projects_source: { "auto": ( "./doxy/xml/", ["patchManager.h"] ) }
+#autosummary_mock_imports: [twoscale.core]
+#<script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+
+exclude_patterns: [README.md, javascript, build]

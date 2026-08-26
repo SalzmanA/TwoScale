@@ -1,0 +1,29 @@
+# Table of contents
+
+format: jb-book
+root: intro
+parts:
+  - caption: The method
+    chapters:
+      - file: theo
+      - file: fenicsx
+      - file: doc/theo/dirichletALG.ipynb
+  - caption: Tutorials
+    chapters:
+      - file: doc/elasticity/stepbystep.md
+        sections:
+        - file: doc/elasticity/stepbystep2D.ipynb
+      - file: doc/elasticity/elasticity.md
+        sections:
+        - file: doc/elasticity/analytical3Delasticity.ipynb
+        - file: doc/elasticity/check_uol_analytic.ipynb
+      - file: doc/damaged/damaged.md
+        sections:
+        - file: doc/damaged/local_damage_elastic_refined.ipynb
+        - file: doc/damaged/pure_discontinuous.ipynb
+        - file: doc/damaged/pull_out.ipynb
+      - file: doc/misc/dirichlet_coarse_enriched.ipynb
+  - caption: API
+    chapters:
+      - file: python_api
+      - file: c++_api

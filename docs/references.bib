@@ -1,0 +1,26 @@
+@InProceedings{Duarte2007,
+author = {Duarte, C. A. and Kim, Dae-Jin and Babu\v{s}ka, Ivo},
+editor={Leit{\~a}o, V. M. A.  and Alves, C. J. S.  and Armando Duarte, C.},
+title = {A Global-Local Approach for the Construction of Enrichment Functions for the Generalized FEM and Its Application to Three-Dimensional Cracks},
+booktitle = {Advances in Meshfree Techniques},
+year = {2007},
+publisher = "Springer Netherlands",
+address = "Dordrecht",
+pages = "1--26",
+abstract = "Existing generalized or extended finite element methods for modeling cracks in three-dimensions require the use of a sufficiently refined mesh around the crack front. This offsets some of the advantages of these methods specially in the case of propagating three-dimensional cracks. In this paper, a strategy to overcome this limitation is investigated. The approach involves the development of enrichment functions that are computed using a new global-local approach. This strategy allows the use of a fixed global mesh around the crack front and is specially appealing for non-linear or time dependent problems since it avoids mapping of solutions between meshes. The resulting technique enjoys the same flexibility of the so-called meshfree methods for this class of problem while being more computationally efficient.",
+isbn = "978-1-4020-6095-3"
+}
+@article{Salzman_2023_1,
+author="Salzman, Alexis
+and Mo{\"e}s, Nicolas",
+title = {A two-scale solver for linear elasticity problems in the context of parallel message passing},
+journal = {Computer Methods in Applied Mechanics and Engineering},
+volume = {407},
+pages = {115914},
+year = {2023},
+issn = {0045-7825},
+doi = {https://doi.org/10.1016/j.cma.2023.115914},
+url = {https://www.sciencedirect.com/science/article/pii/S0045782523000373},
+keywords = {Distributed two-scale method, Global-local, Scalability, Algebraic assembly},
+abstract = {This paper pushes further the intrinsic capabilities of the GFEM^{gl} global-local approach introduced initially in Duarte et al. (2007). We develop a distributed computing approach using MPI (Message Passing Interface) both for the global and local problems. Regarding local problems, a specific scheduling strategy is introduced. Then, to measure correctly the convergence of the iterative process, we introduce a reference solution that revisits the product of classical and enriched functions. As a consequence, we are able to propose a purely matrix-based implementation of the global-local problem. The distributed approach is then compared to other parallel solvers either direct or iterative with domain decomposition. The comparison addresses the scalability as well as the elapsed time. Numerical examples deal with linear elastic problems: a polynomial exact solution problem, a complex micro-structure, and, finally, a pull-out test (with different crack extent).}
+}

@@ -2,7 +2,7 @@
 This project contains a library that implements the distributed two-scale method introduced in Salzman and Moës [SMoes23] from seminal work of Duarte et al. [DKBabuvska07] and adapted to FEniCSx/PETSc usage.
 
 The C++ portion of the library is intended to handle operations that are too resource-intensive for pure Python. The Python API is intended to provide the user with the various building blocks needed to use the “two-scale” method.
-A [documentation](https://salzmana.github.io/test_doc/demo.html) provides more explanations and examples. 
+A [documentation](https://salzmana.github.io/twoscale/twoscale.html) provides more explanations and examples. 
 
 ## License
 
@@ -11,6 +11,8 @@ Copyright (c) 2026 - Ecole Centrale de Nantes
 Author: Alexis Salzman
 
 All c++/python sources are under GNU LGPL license given in COPYING.LESSER file
+
+Documentation (jupyter-book files) is under CC-BY-NC-ND <img src="docs/_static/cc-by-nc-nd.png" alt="CC-BY-NC-ND" width="50" height="18">
 
 ## Project status
 
