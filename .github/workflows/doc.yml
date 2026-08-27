@@ -39,21 +39,13 @@ jobs:
       packages: read
 
     container:
-      image: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale:${{
-        github.event_name == 'workflow_dispatch'
-        && inputs.image_tag
-        || 'latest'
-      }}
+      image: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale:${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || 'latest' }}
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          ref: ${{
-            github.event_name == 'workflow_dispatch'
-            && inputs.source_ref
-            || 'main'
-          }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || 'main' }}
 
       - name: Generate Doc
         working-directory: docs
