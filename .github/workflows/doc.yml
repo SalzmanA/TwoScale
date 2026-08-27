@@ -1,6 +1,6 @@
 name: Documentation
 
-run-name: "Documentation - ${{ inputs.source_sha || github.sha }"
+run-name: "Documentation - ${{ inputs.source_sha || github.sha }}"
 
 on:
   # Called explicitly by Docker workflows
