@@ -14,7 +14,6 @@ WORKDIR /workspace
 
 COPY cpp cpp
 COPY python python
-COPY docs/requirements.txt .
 
 # Build and install the C++ library
 RUN cmake -S cpp -B build-cpp \
@@ -28,8 +27,3 @@ RUN cmake --install build-cpp
 WORKDIR /workspace/python
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install --no-build-isolation .
-
-# only if build went well add requirement for doc
-WORKDIR /workspace
-RUN python3 -m pip install  -r requirements.txt
-
