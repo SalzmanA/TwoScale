@@ -11,7 +11,7 @@ on:
 
 jobs:
   docker:
-    r uns-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
     permissions:
       packages: write
