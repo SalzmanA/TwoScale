@@ -34,9 +34,9 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale
-        tags: |
-          type=raw,value=latest,enable={{is_default_branch}}
-          type=ref,event=branch
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
 
       # Build and push Docker image
       - name: Build and push
