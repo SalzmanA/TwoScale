@@ -1,0 +1,119 @@
+name: Build TwoScale main image for validation and doc
+
+on:
+  schedule:
+    # 20:00 UTC
+    - cron: '0 12 * * *'
+
+  workflow_dispatch:
+
+concurrency:
+  group: twoscale-main
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Get current main revision
+        id: git
+        run: |
+          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Get the Git revision of the currently published image.
+      # This only queries the registry; it does not pull image layers.
+      - name: Get published image revision
+        id: image
+        shell: bash
+        run: |
+          IMAGE="ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale:latest"
+
+          if REVISION=$(docker buildx imagetools inspect "$IMAGE" \
+              --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' \
+              2>/dev/null); then
+
+            echo "Published image revision: $REVISION"
+            echo "revision=$REVISION" >> "$GITHUB_OUTPUT"
+          else
+            echo "No published image found"
+            echo "revision=" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Determine whether one of the relevant paths changed
+      # since the currently published image.
+      - name: Check for relevant changes
+        id: changes
+        shell: bash
+        run: |
+          CURRENT="${{ steps.git.outputs.revision }}"
+          PUBLISHED="${{ steps.image.outputs.revision }}"
+
+          if [ -z "$PUBLISHED" ]; then
+            echo "No previous image found - build required"
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$CURRENT" = "$PUBLISHED" ]; then
+            echo "Main has not changed - build not required"
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Checking changes between:"
+          echo "  published: $PUBLISHED"
+          echo "  current:   $CURRENT"
+
+          if git diff --quiet "$PUBLISHED..$CURRENT" -- \
+              docs/requirement.text \
+              docker/Dockerfile.doc \
+              cpp/ \
+              python/; then
+
+            echo "No relevant changes"
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+
+          else
+
+            echo "Relevant changes detected"
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+
+          fi
+
+      - name: Docker metadata
+        if: steps.changes.outputs.needed == 'true'
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale
+          tags: |
+            type=raw,value=latest
+
+      - name: Build and push
+        if: steps.changes.outputs.needed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.doc
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+

@@ -3,7 +3,7 @@ name: Documentation
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["Build TwoScale image for validation and doc"]
+    workflows: ["Build TwoScale main image for validation and doc"]
     types:
       - completed
   push:

@@ -1,8 +1,10 @@
-name: Build TwoScale image for validation and doc
+name: Build TwoScale branch image for validation and doc
 
 on:
   workflow_dispatch:
   push:
+    branches-ignore:
+      - main
     paths:
       - docs/requirements.txt
       - docker/Dockerfile.doc
@@ -35,7 +37,6 @@ jobs:
         with:
           images: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
 
       # Build and push Docker image
