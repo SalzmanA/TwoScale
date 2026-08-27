@@ -1,5 +1,7 @@
 name: Documentation
 
+run-name: "Documentation - ${{ inputs.source_sha || github.sha }"
+
 on:
   # Called explicitly by Docker workflows
   workflow_dispatch:
@@ -11,6 +13,11 @@ on:
 
       source_ref:
         description: Git ref containing the documentation source
+        required: true
+        type: string
+
+      source_sha:
+        description: Git commit containing the documentation source
         required: true
         type: string
 
@@ -45,7 +52,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || 'main' }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.ref }}
 
       - name: Generate Doc
         working-directory: docs
