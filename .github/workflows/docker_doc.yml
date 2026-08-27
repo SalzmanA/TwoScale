@@ -11,7 +11,7 @@ on:
 
 jobs:
   docker:
-    runs-on: ubuntu-latest
+    r uns-on: ubuntu-latest
 
     permissions:
       packages: write
@@ -28,23 +28,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Generate Docker image tags and labels
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale
+        tags: |
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=ref,event=branch
 
       # Build and push Docker image
-      - name: Build and push latest (main)
-        if: github.ref == 'refs/heads/main'
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/Dockerfile.doc
           push: true
-          tags: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale:latest
-
-      - name: Build and push branch image
-        if: github.ref != 'refs/heads/main'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/Dockerfile.doc
-          push: true
-          tags: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale:${{ github.ref_name }}
-
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
