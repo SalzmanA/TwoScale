@@ -2,8 +2,8 @@ name: Build TwoScale main image for validation and doc
 
 on:
   schedule:
-    # 20:00 UTC
-    - cron: '40 13 * * *'
+    # 21:45 UTC
+    - cron: '45 21 * * *'
 
   workflow_dispatch:
 
