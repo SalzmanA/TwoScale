@@ -1,11 +1,26 @@
 name: Documentation
 
 on:
+  # Called explicitly by Docker workflows
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Build TwoScale main image for validation and doc"]
-    types:
-      - completed
+    inputs:
+      image_tag:
+        description: Docker image tag to use
+        required: true
+        type: string
+
+      source_ref:
+        description: Git ref containing the documentation source
+        required: true
+        type: string
+
+      deploy:
+        description: Deploy to GitHub Pages
+        required: true
+        type: boolean
+        default: false
+
+  # Documentation-only changes
   push:
     paths:
       - "docs/**"
@@ -15,56 +30,70 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
-
-
 jobs:
   book:
-
-    if: >
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success')
-    
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
 
     container:
       image: ghcr.io/${{ vars.REPO_NAME_IO }}/twoscale:${{
-        github.event_name == 'push'
-        && (github.ref_name == 'main' && 'latest' || github.ref_name)
-        || (github.event.workflow_run.head_branch == 'main' && 'latest' || github.event.workflow_run.head_branch)
-        }}
+        github.event_name == 'workflow_dispatch'
+        && inputs.image_tag
+        || 'latest'
+      }}
 
     steps:
-
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          ref: ${{
+            github.event_name == 'workflow_dispatch'
+            && inputs.source_ref
+            || 'main'
+          }}
 
       - name: Generate Doc
         working-directory: docs
-        run:  make
+        run: make
 
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: docs/_build/html
 
   deploy:
     needs: book
+
+    # Deploy only:
+    # - docs changes on main
+    # - Docker main image explicitly requested deployment
+    # Never deploy branch documentation.
     if: >
-      (github.event_name == 'push' &&
-      github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == github.event.repository.default_branch)
+      (
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/main'
+      ) ||
+      (
+        github.event_name == 'workflow_dispatch' &&
+        inputs.deploy == true
+      )
+
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       pages: write
       id-token: write
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
 
