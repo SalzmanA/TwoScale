@@ -127,10 +127,10 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'doc.yml',
-              ref: 'main'
+              ref: 'main',
               inputs: {
                 image_tag: 'latest',
-                source_ref: 'main'
+                source_ref: 'main',
                 deploy: 'true'
               }
             })
