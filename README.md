@@ -2,7 +2,8 @@
 This project contains a library that implements the distributed two-scale method introduced in Salzman and Moës [SMoes23] from seminal work of Duarte et al. [DKBabuvska07] and adapted to FEniCSx/PETSc usage.
 
 The C++ portion of the library is intended to handle operations that are too resource-intensive for pure Python. The Python API is intended to provide the user with the various building blocks needed to use the “two-scale” method.
-A [documentation](https://salzmana.github.io/twoscale/twoscale.html) provides more explanations and examples. 
+
+Full explanations on the library with examples can be found in the [documentation](https://salzmana.github.io/twoscale/twoscale.html). 
 
 ## License
 
@@ -21,10 +22,7 @@ It follows the directory structure of the libraries in this FEniCSx/PETSc ecosys
 This is the starting point for this repository.
 The idea is to keep pace with fenicsx releases.
 As a result, two updates in quick succession made the library compatible with versions 0.10 and 0.11 without really taking into account the improvements introduced by those versions.
-The current status of the implementation is therefore somewhat unstable (based on the features of version 0.9 but compatible with version 0.11) and is likely to change.
-
-## Installation
-TODO
+The current state of implementation is therefore somewhat incomplete (it is based on the features of version 0.9 but is compatible with version 0.11) and is likely to change.
 
 ## reference
 
