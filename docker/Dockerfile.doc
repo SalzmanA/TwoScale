@@ -32,4 +32,3 @@ RUN python3 -m pip install --no-build-isolation .
 # only if build went well add requirement for doc
 WORKDIR /workspace
 RUN python3 -m pip install  -r requirements.txt
-
