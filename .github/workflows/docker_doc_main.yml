@@ -3,7 +3,7 @@ name: Build TwoScale main image for validation and doc
 on:
   schedule:
     # 20:00 UTC
-    - cron: '30 14 * * *'
+    - cron: '40 13 * * *'
 
   workflow_dispatch:
 
@@ -116,6 +116,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          sbom: false
       - name: Trigger documentation
         if: steps.changes.outputs.needed == 'true'
         uses: actions/github-script@v7
