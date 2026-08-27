@@ -1,11 +1,14 @@
 FROM ghcr.io/jorgensd/dolfinx_mpc:v0.9.3
 
 LABEL \
+  maintainer- \
+  description- \
   org.opencontainers.image.title="Distributed two-scale method library" \
   org.opencontainers.image.description="A library that implements the distributed two-scale method adapted to FEniCSx/PETSc usage." \
   org.opencontainers.image.authors="Alexis Salzman (alexis.salzman@ec-nantes.fr)" \
   org.opencontainers.image.vendor="Nantes université, Ecole centrale de Nantes, GeM Institute, UMR CNRS 6180, 1 rue de la Noë, 44321, Nantes, France" \
   org.opencontainers.image.licenses="GNU LGPL-3.0"
+
 
 WORKDIR /workspace
 
