@@ -3,7 +3,7 @@ This project contains a library that implements the distributed two-scale method
 
 The C++ portion of the library is intended to handle operations that are too resource-intensive for pure Python. The Python API is intended to provide the user with the various building blocks needed to use the “two-scale” method.
 
-Full explanations on the library with examples can be found in the [documentation](https://salzmana.github.io/twoscale/twoscale.html). 
+Full explanations on the library with examples can be found in the [documentation](https://salzmana.github.io/TwoScale/intro.html#). 
 
 ## License
 
