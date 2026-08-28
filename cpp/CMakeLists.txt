@@ -1,7 +1,7 @@
 # ===============================================================================================
 # Two-scale project
 cmake_minimum_required(VERSION 3.21)
-project(Twoscale VERSION "0.10.0")
+project(Twoscale VERSION "0.11.0")
 
 # ===============================================================================================
 # pyproject.toml generation from VERSION above

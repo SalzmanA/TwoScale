@@ -91,7 +91,8 @@ dolfinx_mpc::mpc_data<T> generateMPC(const twoscale::scaleJump<dolfinx::mesh::Me
    auto &geomc = cdomain->geometry();
    std::span<const U> xc_g = geomc.x();
    auto xc_dofmap = geomc.dofmap();
-   const auto &cellc_cmap = geomc.cmap();
+   const auto &cellc_cmaps = geomc.cmaps();
+   const auto &cellc_cmap = cellc_cmaps.front();
    assert(cellc_cmap.is_affine());
    const std::size_t num_dofs_g = cellc_cmap.dim();
    const std::size_t gdim = geomc.dim();

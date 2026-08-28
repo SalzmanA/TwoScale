@@ -459,7 +459,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
 #error "PARMETIS or KAHIP required"
 #endif
 #endif
-            auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner);
+            auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner,2);
             auto &geo = mesh.geometry();
             const int gdim = geo.dim();
             const auto &x = geo.x();
@@ -471,7 +471,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
                                                 std::span<std::int64_t>(cells.data(), cells.size()));
             impl::Coord3DToGdimCoordPred<T> pred(gdim);
             auto locxgdim = impl::Coord3DToGdimCoord<T>(locx, pred);
-            auto coarse_mesh = dolfinx::mesh::create_mesh(comm, comm, cells, geo.cmap(), comm, locxgdim, {nblv, gdim}, cell_part);
+            auto coarse_mesh = dolfinx::mesh::create_mesh(comm, comm, cells, geo.cmaps().front(), comm, locxgdim, {nblv, gdim}, cell_part,2);
 
             // ==========
             // reset mesh
@@ -507,7 +507,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
             // load balance mesh with clustered dual graph based on support
             // ============================================================
             const auto partitioner_fix = dolfinx::graph::partitionerClustering(u_support);
-            auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner_fix);
+            auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner_fix,2);
             auto &geo = mesh.geometry();
             const int gdim = geo.dim();
             const auto &x = geo.x();
@@ -519,7 +519,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
                                                 std::span<std::int64_t>(cells.data(), cells.size()));
             impl::Coord3DToGdimCoordPred<T> pred(gdim);
             auto locxgdim = impl::Coord3DToGdimCoord<T>(locx, pred);
-            auto coarse_mesh = dolfinx::mesh::create_mesh(comm, comm, cells, geo.cmap(), comm, locxgdim, {nblv, gdim}, cell_part);
+            auto coarse_mesh = dolfinx::mesh::create_mesh(comm, comm, cells, geo.cmaps().front(), comm, locxgdim, {nblv, gdim}, cell_part,2);
 
             // ==========
             // reset mesh
@@ -611,7 +611,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
 #error "PARMETIS or KAHIP required"
 #endif
 #endif
-         auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner);
+         auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner,2);
          // auto cell_part = dolfinx::mesh::create_cell_partitioner();
          auto &geo = mesh.geometry();
          const int gdim = geo.dim();
@@ -637,7 +637,8 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
          //   auto coarse_mesh = dolfinx::mesh::create_mesh(comm, comm, cells, geo.cmap(), comm, locxgdim, {nblv, gdim},
          //   cell_part,*tag);
          // else
-         auto coarse_mesh = dolfinx::mesh::create_mesh(comm, comm, cells, geo.cmap(), comm, locxgdim, {nblv, gdim}, cell_part);
+         auto coarse_mesh =
+             dolfinx::mesh::create_mesh(comm, comm, cells, geo.cmaps().front(), comm, locxgdim, {nblv, gdim}, cell_part, 2);
 
          // ==================================
          // generated edge weight for support
@@ -658,7 +659,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
             topoi->create_connectivity(0, dim);
             auto adj = topoi->connectivity(0, dim);
             std::cout << pid << "nb nodes " << adj->num_nodes() << std::endl;
-            auto new_enriched_nodes = locate_entities(coarse_mesh, 0, enriched);
+            auto new_enriched_nodes = dolfinx::mesh::locate_entities(coarse_mesh, 0, enriched);
             for (auto ei : new_enriched_nodes)
             {
                const auto li = adj->links(ei);
@@ -688,7 +689,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
 #error "PARMETIS or KAHIP required"
 #endif
 #endif
-         auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner);
+         auto cell_part = dolfinx::mesh::create_cell_partitioner(dolfinx::mesh::GhostMode::none, partitioner,2);
          // auto cell_part = dolfinx::mesh::create_cell_partitioner();
          auto &geo = coarse_mesh.geometry();
          const int gdim = geo.dim();
@@ -701,7 +702,8 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
                                               std::span<std::int64_t>(cells.data(), cells.size()));
          impl::Coord3DToGdimCoordPred<T> pred(gdim);
          auto locxgdim = impl::Coord3DToGdimCoord<T>(locx, pred);
-         auto new_coarse_mesh = dolfinx::mesh::create_mesh(comm, comm, cells, geo.cmap(), comm, locxgdim, {nblv, gdim}, cell_part);
+         auto new_coarse_mesh =
+             dolfinx::mesh::create_mesh(comm, comm, cells, geo.cmaps().front(), comm, locxgdim, {nblv, gdim}, cell_part, 2);
          coarse_mesh = std::move(new_coarse_mesh);
          }
          /*
@@ -1535,7 +1537,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
    // ========================
    // dolfinx::mesh::CellPartitionFunction nofunc;
    // mesh_support = std::move(dolfinx::mesh::create_mesh(comm, comm, cells, geoc.cmap(), comm, xn, {nbnnl, 3}, nofunc));
-   auto [merged_mesh, remap] = dolfinx::mesh::create_mesh(comm, comm, cells, geoc.cmap(), comm, xn, {nbnnl, gdim});
+   auto [merged_mesh, remap] = dolfinx::mesh::create_mesh(comm, comm, cells, geoc.cmaps().front(), comm, xn, {nbnnl, gdim});
 
    // auto [yo, yoremap] = dolfinx::mesh::create_mesh(comm, comm, cellst, geoc.cmap(), comm, xn, {nbnnl, gdim});
 

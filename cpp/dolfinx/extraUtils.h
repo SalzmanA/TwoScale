@@ -100,7 +100,7 @@ std::tuple<Mesh<typename std::remove_reference_t<typename U::value_type>>, std::
      for (std::size_t i = 1; i < cell_offsets.size(); ++i) cell_offsets[i] = cell_offsets[i - 1] + num_cell_vertices;
      spdlog::info("Build local dual graph");
      auto [graph, unmatched_facets, max_v, facet_attached_cells] =
-         build_local_dual_graph(std::vector{celltype}, {std::span(cells1_v.data(), num_owned_cells * num_cell_vertices)});
+         build_local_dual_graph(std::vector{celltype}, {std::span(cells1_v.data(), num_owned_cells * num_cell_vertices)},2);
      remap = graph::reorder_gps(graph);
      // const std::vector<int> remap = graph::reorder_gps(graph);
 
@@ -133,14 +133,15 @@ std::tuple<Mesh<typename std::remove_reference_t<typename U::value_type>>, std::
   std::vector<std::span<const int>> ghost_owners_span={std::span(ghost_owners)};
   std::span<const std::int64_t> boundary_vertices_span(boundary_v);
   Topology topology = create_topology(comm, celltypes,cells1_v_span, original_idx1_span,
-                                      ghost_owners_span,  boundary_v);
+                                      ghost_owners_span,  boundary_v, 0);
 
 
 
   // Create connectivities required higher-order geometries for creating
   // a Geometry object
+  const auto& entity_dofs = doflayout.entity_dofs_all();
   for (int e = 1; e < topology.dim(); ++e)
-    if (doflayout.num_entity_dofs(e) > 0)
+    if (entity_dofs[e].size() > 0)
       topology.create_entities(e);
   if (element.needs_dof_permutations())
     topology.create_entity_permutations();

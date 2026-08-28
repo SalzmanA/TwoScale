@@ -202,7 +202,8 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
    // collect coarse element topo information
    // =======================================
    auto &geomc = cdomain->geometry();
-   const auto &cellc_cmap = geomc.cmap();
+   const auto &cellc_cmaps = geomc.cmaps();
+   const auto &cellc_cmap = cellc_cmaps.front();
    assert(cellc_cmap.is_affine());
    const std::size_t nb_nodes_elem = cellc_cmap.dim();
    const std::size_t gdim = geomc.dim();
@@ -1111,7 +1112,7 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
    auto &geomc = cdomain->geometry();
    std::span<const U> xc_g = geomc.x();
    auto xc_dofmap = geomc.dofmap();
-   const auto &cellc_cmap = geomc.cmap();
+   const auto &cellc_cmap = geomc.cmaps().front();
    assert(cellc_cmap.is_affine());
    const std::size_t nb_nodes_elem = cellc_cmap.dim();
    const std::size_t gdim = geomc.dim();
@@ -1383,10 +1384,10 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
             if (to_enrich.find(i_topo) != to_enrich.end())
             {
                // filter PC by BC
-               set_mix_coarse_graph(x, k, std_to_mix,false);
+               set_mix_coarse_graph(x, k, std_to_mix[0],false);
                // filter PE by BC
                k += bs_cs;
-               set_mix_coarse_graph(x, k, enr_to_mix,false);
+               set_mix_coarse_graph(x, k, enr_to_mix[0],false);
 
                // init enriched dof ids if not already done and block not fully eliminated
                if (enriched_dof_id.find(i_topo) == enriched_dof_id.end())
@@ -1403,7 +1404,7 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
                   if (nb_eliminated != bs_cs)
                   {
                      std::int64_t g;
-                     idxmapc->local_to_global(std::span<const std::int32_t>(&enr_to_mix[x * bs_cs], 1),
+                     idxmapc->local_to_global(std::span<const std::int32_t>(&enr_to_mix[0][x * bs_cs], 1),
                                               std::span<std::int64_t>(&g, 1));
                      twoscale_dolfinx::enrichedDofIDs idxs;
                      idxs.global_coarse_block_dof_idx=g;
@@ -1430,11 +1431,11 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
 
                }
                */
-               set_mix_coarse_graph(x, k, std_to_mix,false); 
+               set_mix_coarse_graph(x, k, std_to_mix[0],false); 
                
                // PE: elimination forced in this case so any dof filtered by BC is an error
                k += bs_cs;
-               if (set_mix_coarse_graph(x, k, enr_to_mix,true)) 
+               if (set_mix_coarse_graph(x, k, enr_to_mix[0],true)) 
                {
                   std::cout
                       << "Given boundary condition include enr dofs not in support of enriched/extra enriched nodes. These BC "
@@ -1775,20 +1776,20 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
             if (to_enrich.find(std_topo[l]) != to_enrich.end())
             {
                // filter PC by BC
-               set_mix_coarse_ass(x, k, std_to_mix, nb_d_eff, end_d_elim, false);
+               set_mix_coarse_ass(x, k, std_to_mix[0], nb_d_eff, end_d_elim, false);
                // filter PE by BC
                k += bs_cs;
-               set_mix_coarse_ass(x, k, enr_to_mix, nb_d_eff, end_d_elim, false);
+               set_mix_coarse_ass(x, k, enr_to_mix[0], nb_d_eff, end_d_elim, false);
             }
             // otherwise coarse is eliminated from PE and PE,PS are not filtered  by BC
             // Acc diag eliminated dof has to be identified.
             else
             {
                // PC normally not filtered by BC (already checked)
-               set_mix_coarse_ass(x, k, std_to_mix, nb_d_eff, end_d_elim, false);
+               set_mix_coarse_ass(x, k, std_to_mix[0], nb_d_eff, end_d_elim, false);
                k += bs_cs;
                // PE force elimination and normally not filtered by BC (already checked)
-               set_mix_coarse_ass(x, k, enr_to_mix, nb_d_eff, end_d_elim, true);
+               set_mix_coarse_ass(x, k, enr_to_mix[0], nb_d_eff, end_d_elim, true);
             }
             k += bs_cs;
             ++l;

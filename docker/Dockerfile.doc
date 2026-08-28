@@ -1,4 +1,4 @@
-FROM ghcr.io/jorgensd/dolfinx_mpc:v0.10.5
+FROM ghcr.io/jorgensd/dolfinx_mpc:v0.11.0.post0
 
 LABEL \
   maintainer="" \
