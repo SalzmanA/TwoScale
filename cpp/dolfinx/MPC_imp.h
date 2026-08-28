@@ -214,7 +214,7 @@ dolfinx_mpc::mpc_data<T> generateMPC(const twoscale::scaleJump<dolfinx::mesh::Me
       //PRINT("face_child", face_child);
 
 
-      auto slaves_dofs_=fem::locate_dofs_topological(*topof,*dofmap,dimm1,face_child,false);
+      auto slaves_dofs_=dolfinx::fem::locate_dofs_topological(*topof,*dofmap,dimm1,face_child,false);
 
       child_dofs.insert(slaves_dofs_.begin(),slaves_dofs_.end());
       //PRINT("slaves_dofs", slaves_dofs_);
@@ -263,7 +263,8 @@ dolfinx_mpc::mpc_data<T> generateMPC(const twoscale::scaleJump<dolfinx::mesh::Me
             slaves_nodes[++k] = v;
       slaves_nodes.resize(k + 1);
 
-      auto slaves_dofs=fem::locate_dofs_topological(*topof,*dofmap,0,std::span<const std::int32_t>(slaves_nodes),false);
+      auto slaves_dofs =
+          dolfinx::fem::locate_dofs_topological(*topof, *dofmap, 0, std::span<const std::int32_t>(slaves_nodes), false);
 
       std::ranges::sort(slaves_dofs);
 
@@ -281,7 +282,7 @@ dolfinx_mpc::mpc_data<T> generateMPC(const twoscale::scaleJump<dolfinx::mesh::Me
 
       // master
       master_nodes.resize(l + 1);
-      auto master_dofs=fem::locate_dofs_topological(*topof,*dofmap,0,std::span<const std::int32_t>(master_nodes),false);
+      auto master_dofs=dolfinx::fem::locate_dofs_topological(*topof,*dofmap,0,std::span<const std::int32_t>(master_nodes),false);
       //PRINT("master_dofs", master_dofs);
 
       // remove already treated
@@ -548,7 +549,7 @@ dolfinx_mpc::mpc_data<T> generateMPC(const twoscale::scaleJump<dolfinx::mesh::Me
       MPI_Get_address(&trash.owner, &disp[3]);
       for (auto &d : std::span<MPI_Aint>(disp)) d -= base;
       int blocklen[4]={1,2,2,2};
-      MPI_Datatype type[4]={MPI_INT64_T,dolfinx::MPI::mpi_type<T>(),MPI_INT64_T,MPI_INT32_T};
+      MPI_Datatype type[4]={MPI_INT64_T,dolfinx::MPI::mpi_t<T>,MPI_INT64_T,MPI_INT32_T};
       // verification to check assertion on padding is not wrong
       assert(sizeof(trash)>=2*sizeof(T)+3*sizeof(std::int64_t)+2*sizeof(std::int32_t));
       assert(sizeof(std::array<T,2>)>=2*sizeof(T));

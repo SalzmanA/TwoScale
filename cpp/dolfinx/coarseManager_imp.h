@@ -378,10 +378,11 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
       // ================================
       // Generate specific enriched space
       // ================================
-      auto [mesh_support_, cell_map, vertice_map, coord_map] = dolfinx::mesh::create_submesh(*cdomain, dim, sj.getSupport());
+      auto support = sj.getSupport();
+      auto [mesh_support_, cell_map, vertice_map, coord_map] = dolfinx::mesh::create_submesh(*cdomain, dim, support);
       mesh_support = std::make_shared<dolfinx::mesh::Mesh<U>>(mesh_support_);
       enriched_space = std::make_shared<dolfinx::fem::FunctionSpace<U>>(
-          dolfinx::fem::create_functionspace(mesh_support, coarse_space->element()->basix_element(), {dim}));
+          dolfinx::fem::create_functionspace(mesh_support, coarse_space->element()));
       dofmape = enriched_space->dofmap();
       auto bs_e = dofmape->index_map_bs();
       assert(bs_e == bs_c);
@@ -389,13 +390,15 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
       // =============================
       // Generate cell correspondences
       // =============================
-      std::int32_t nbcel = 0;
-      for (auto idxcc : cell_map)
+      std::int32_t nbcel = support.size();
+      std::vector<std::int32_t>sub_idx(nbcel);
+      for (auto i : std::views::iota(0, nbcel)) sub_idx[i] = i;
+      auto cell_coresp = cell_map.sub_topology_to_topology(sub_idx, false);
+      enriched_cells.reserve(nbcel);
+      for (std::int32_t i = 0; i < nbcel; ++i)
       {
-         enriched_cells.insert(std::make_pair(idxcc, nbcel));
-         ++nbcel;
+         enriched_cells.emplace(cell_coresp[i],i);
       }
-      assert(enriched_cells.size() == cell_map.size());
       // PRINT("cell_map", cell_map);
       // std::println("enriched_cells {}", enriched_cells);
    }
@@ -1139,7 +1142,7 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
       auto BC_values = BC->value();
       assert(BC_values.index() == 0);
       //std::span<const PetscScalar> x(std::get<0>(BC_values)->x()->array());
-      Vec XDc_ = la::petsc::create_vector_wrap(*(std::get<0>(BC_values)->x()));
+      Vec XDc_ = dolfinx::la::petsc::create_vector_wrap(*(std::get<0>(BC_values)->x()));
       // check that non null Dirichlet exist (XDc!=0). If not W=L.XDc=0 doesn't need to be created as it lead to zero results
       // AD.W=0 or do not change computation W+Qt.S=Qt.S. In this case L is also not assembled.
       PetscReal norm_inf;

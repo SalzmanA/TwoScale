@@ -554,32 +554,31 @@ twoscale_dolfinx::patchManager<P> generatePatchManager(const twoscale::scaleJump
       }
       // ghost to local exchange with local update
       dolfinx::common::Scatterer coarse_sub_face_scatterer(sub_idxmapc1.first, dimp2);
-      coarse_sub_face_scatterer.scatter_rev(std::span<std::int64_t>(exchangeg.begin(), exchangeg.begin() + nbfscl * dimp2),
-                                            std::span<const std::int64_t>(exchangeg.begin() + nbfscl * dimp2, exchangeg.end()),
-                                            [&exchangeg, &dimp2](const std::int64_t &i, const std::int64_t &j) {
-                                               std::int32_t rf = (&i - exchangeg.data()) / dimp2;
-                                               std::span<std::int64_t> face_node(exchangeg.data() + rf * dimp2, dimp2);
-                                               if (j>-1)
-                                               {
-                                                  // if j not present add it
-                                                  auto itf = std::ranges::find(face_node, j);
-                                                  if (itf == face_node.end())
-                                                  {
-                                                     auto itf = std::ranges::find(face_node, -1);
-                                                     assert(itf != face_node.end());
-                                                     *itf = j;
-                                                  }
-                                                  // if j present its a double on the face:
-                                                  // 2 cells of the same patch connected to this face thus this face is not on
-                                                  // boundary of the patch thus it is removed
-                                                  else
-                                                     *itf = -1;
-                                               }
-                                               return i;
-                                            });
-      // local updated now imposed to ghost
-      coarse_sub_face_scatterer.scatter_fwd(std::span<const std::int64_t>(exchangeg.begin(), exchangeg.begin() + nbfscl * dimp2),
-                                            std::span<std::int64_t>(exchangeg.begin() + nbfscl*dimp2, exchangeg.end()));
+      scatter_rev(coarse_sub_face_scatterer, std::span<std::int64_t>(exchangeg.begin(), exchangeg.begin() + nbfscl * dimp2),
+                      std::span<const std::int64_t>(exchangeg.begin() + nbfscl * dimp2, exchangeg.end()),
+                      [&exchangeg, &dimp2](const std::int64_t &i, const std::int64_t &j) {
+                         std::int32_t rf = (&i - exchangeg.data()) / dimp2;
+                         std::span<std::int64_t> face_node(exchangeg.data() + rf * dimp2, dimp2);
+                         if (j > -1)
+                         {
+                            // if j not present add it
+                            auto itf = std::ranges::find(face_node, j);
+                            if (itf == face_node.end())
+                            {
+                               auto itfb = std::ranges::find(face_node, -1);
+                               assert(itfb != face_node.end());
+                               *itfb = j;
+                            }
+                            // if j present its a double on the face:
+                            // 2 cells of the same patch connected to this face thus this face is not on
+                            // boundary of the patch thus it is removed
+                            else
+                               *itf = -1;
+                         }
+                         return i;
+                      });
+      scatter_fwd(coarse_sub_face_scatterer, std::span<const std::int64_t>(exchangeg.begin(), exchangeg.begin() + nbfscl * dimp2),
+                  std::span<std::int64_t>(exchangeg.begin() + nbfscl * dimp2, exchangeg.end()));
    }
 
    // ==============================
@@ -611,6 +610,7 @@ twoscale_dolfinx::patchManager<P> generatePatchManager(const twoscale::scaleJump
    auto gen = [&dofmapf, &idxmapf, &ownersf, &dof_idx_2_dest_rank, &idx_2_dest_rank, &nbncl, &owners, &sj, &adj, &adjcf, &adjcff,
                &state, &patches, &pid, &idxmapc0, &faces_extrasupport, &exchangeg, &dimm1, &dimp2, &closure,
                &nbdfl](const std::int32_t &node) {
+      //bool show = (node == 6);
       int owner;
       std::int64_t nodeg;
       std::vector<int> remotes;
@@ -663,6 +663,8 @@ twoscale_dolfinx::patchManager<P> generatePatchManager(const twoscale::scaleJump
             }
          }
       }
+      //if (show) std::println("u_faces: {}", u_faces);
+
       auto feed = [&nbdfl, &ownersf, &remotes, &pid, &dof_idx_2_dest_rank](
                       const std::int32_t &x, std::unordered_set<std::int32_t> &u_d,
                       std::unordered_map<std::int32_t, int> &u_d_g) {
@@ -828,7 +830,7 @@ twoscale_dolfinx::patchManager<P> generatePatchManager(const twoscale::scaleJump
          std::ranges::sort(ddofs_);
       }
 
-      //std::println("dofs patch        {}: {}\ndofs derichlet    {}: {}\ndofs_to_exchange  {}: {}\nddofs_to_exchange {}: {}", dofs_.size(), dofs_, ddofs_.size(), ddofs_, dofs_to_exchange_.size(), dofs_to_exchange_, ddofs_to_exchange_.size(), ddofs_to_exchange_);
+      //if (show) std::println("dofs patch        {}: {}\ndofs derichlet    {}: {}\ndofs_to_exchange  {}: {}\nddofs_to_exchange {}: {}", dofs_.size(), dofs_, ddofs_.size(), ddofs_, dofs_to_exchange_.size(), dofs_to_exchange_, ddofs_to_exchange_.size(), ddofs_to_exchange_);
 
       // TODO : dof list of ts Dirichlet bc:
       //             * dofs connected to an element outside the patch (may be remote)   OK done

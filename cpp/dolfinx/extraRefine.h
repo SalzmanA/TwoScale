@@ -4,7 +4,7 @@
  * Copyright (C) 2026 - Ecole Centrale de Nantes
  * Author: Alexis Salzman
  *
- * This code is extracted from DOLFINx 0.9.0 and slightly modified to take into account element reordering in create_mesh.
+ * This code is extracted from DOLFINx and slightly modified to take into account element reordering in create_mesh.
  * use for that custom create_mesh that provides cell mapping.
  *
  * SPDX-License-Identifier:    LGPL-3.0-or-later
@@ -13,20 +13,9 @@
 #ifndef TS_DOLFINX_EXTRA_REFINE
 #define TS_DOLFINX_EXTRA_REFINE
 
-#pragma once
 
-#include "dolfinx/graph/AdjacencyList.h"
-#include "dolfinx/mesh/Mesh.h"
-#include "dolfinx/mesh/Topology.h"
-#include "dolfinx/mesh/cell_types.h"
-#include "dolfinx/refinement/interval.h"
-#include "dolfinx/refinement/plaza.h"
+#include "dolfinx/refinement/refine.h"
 #include "extraUtils.h"
-#include <algorithm>
-#include <concepts>
-#include <optional>
-#include <spdlog/spdlog.h>
-#include <utility>
 
 namespace dolfinx::refinement
 {
@@ -61,8 +50,8 @@ std::tuple<mesh::Mesh<T>, std::optional<std::vector<std::int32_t>>, std::optiona
        (topology->cell_type() == mesh::CellType::interval) ? interval::compute_refinement_data(mesh, edges, option)
                                                            : plaza::compute_refinement_data(mesh, edges, option);
 
-   auto [ mesh1, remap] = mesh::create_mesh(mesh.comm(), mesh.comm(), cell_adj.array(), mesh.geometry().cmap(),
-                                                         mesh.comm(), new_vertex_coords, xshape);
+   auto [ mesh1, remap] = mesh::create_mesh(mesh.comm(), mesh.comm(), cell_adj.array(), mesh.geometry().cmap(), 
+                                                        mesh.comm(), new_vertex_coords, xshape);
 
    if (parent_cell.has_value())
    {

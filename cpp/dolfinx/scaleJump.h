@@ -13,6 +13,8 @@
 #include "dolfinx/mesh/Mesh.h"
 #include "dolfinx/mesh/MeshTags.h"
 #include "dolfinx/mesh/utils.h"
+#include "dolfinx/graph/AdjacencyList.h"
+#include "dolfinx/common/Scatterer.h"
 
 // still under reflection if all child should be constructed or not:
 // pros:

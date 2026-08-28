@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2019-2020 Garth N. Wells
+ * Copyright (C) 2019-2024 Garth N. Wells
  *
  * Copyright (C) 2026 - Ecole Centrale de Nantes
  * Author: Alexis Salzman
  *
- * This code is extracted from DOLFINx 0.9.0 and slightly modified to return element reordering.
+ * This code is extracted from DOLFINx and slightly modified to return element reordering.
  *
  *
  * SPDX-License-Identifier:    LGPL-3.0-or-later
@@ -16,36 +16,42 @@
 
 namespace dolfinx::mesh
 {
-/// @brief Create a distributed mesh from mesh data using a provided
-/// graph partitioning function for determining the parallel
-/// distribution of the mesh.
+/// @brief Create a distributed mesh::Mesh from mesh data without redistribution
 ///
-/// From mesh input data that is distributed across processes, a
-/// distributed mesh::Mesh is created. If the partitioning function is
-/// not callable, i.e. it does not store a callable function, no
-/// re-distribution of cells is done.
+/// The input cells and geometry data can be distributed across the
+/// calling ranks, but must be not duplicated across ranks.
+/// Only one type of cells is treated in this version.
+///
+/// No parallel re-distribution of cells is performed.
+///
+/// @note Collective.
 ///
 /// @param[in] comm Communicator to build the mesh on.
 /// @param[in] commt Communicator that the topology data (`cells`) is
 /// distributed on. This should be `MPI_COMM_NULL` for ranks that should
 /// not participate in computing the topology partitioning.
-/// @param[in] cells Cells on the calling process. Each cell (node in
-/// the `AdjacencyList`) is defined by its 'nodes' (using global
-/// indices) following the Basix ordering. For lowest order cells this
-/// will be just the cell vertices. For higher-order cells, other cells
-/// 'nodes' will be included. See dolfinx::io::cells for examples of the
-/// Basix ordering.
-/// @param[in] element Coordinate element for the cells.
-/// @param[in] commg Communicator for geometry
+/// @param[in] cells Cells, grouped by cell type with `cells[i]` being
+/// the cells of the same type. Cells are defined by their 'nodes'
+/// (using global indices) following the Basix ordering, and for each
+/// cell type concatenated to form a flattened list. For lowest-order
+/// cells this will be just the cell vertices. For higher-order geometry
+/// cells, other cell 'nodes' will be included. See io::cells for
+/// examples of the Basix ordering.
+/// @param[in] elements Coordinate elements for the cells, where
+/// `elements[i]` is the coordinate element for the cells in `cells[i]`.
+/// **The list of elements must be the same on all calling parallel
+/// ranks.**
+/// @param[in] commg Communicator for geometry.
 /// @param[in] x Geometry data ('node' coordinates). Row-major storage.
 /// The global index of the `i`th node (row) in `x` is taken as `i` plus
-/// the process offset  on`comm`, The offset  is the sum of `x` rows on
-/// all processed with a lower rank than the caller.
+/// the parallel rank offset (on `comm`), where the offset is the sum of
+/// `x` rows on all lower ranks than the caller.
 /// @param[in] xshape Shape of the `x` data.
-/// @return A mesh distributed on the communicator `comm`.
+/// @return A mesh distributed on the communicator `comm` and the map of old index cell numbering
 template <typename U>
 std::tuple<Mesh<typename std::remove_reference_t<typename U::value_type>>, std::vector<std::int32_t>> create_mesh(
-    MPI_Comm comm, MPI_Comm commt, std::span<const std::int64_t> cells,
+    MPI_Comm comm, MPI_Comm commt,
+    std::span<const std::int64_t> cells,
     const fem::CoordinateElement<typename std::remove_reference_t<typename U::value_type>>& element, MPI_Comm commg, const U& x,
     std::array<std::size_t, 2> xshape)
 {
@@ -121,8 +127,14 @@ std::tuple<Mesh<typename std::remove_reference_t<typename U::value_type>>, std::
   }
 
   // Create Topology
-  Topology topology = create_topology(comm, cells1_v, original_idx1,
-                                      ghost_owners, celltype, boundary_v);
+  const std::vector<CellType> celltypes = {celltype};
+  std::vector<std::span<const std::int64_t>> cells1_v_span={std::span(cells1_v)};
+  std::vector<std::span<const std::int64_t>> original_idx1_span={std::span(original_idx1)};
+  std::vector<std::span<const int>> ghost_owners_span={std::span(ghost_owners)};
+  std::span<const std::int64_t> boundary_vertices_span(boundary_v);
+  Topology topology = create_topology(comm, celltypes,cells1_v_span, original_idx1_span,
+                                      ghost_owners_span,  boundary_v);
+
 
 
   // Create connectivities required higher-order geometries for creating
@@ -136,6 +148,7 @@ std::tuple<Mesh<typename std::remove_reference_t<typename U::value_type>>, std::
   // Build list of unique (global) node indices from cells1 and
   // distribute coordinate data
   std::vector<std::int64_t> nodes1 = cells1;
+  std::vector<std::int64_t> nodes2 = cells1;
   dolfinx::radix_sort(nodes1);
   auto [unique_end, range_end] = std::ranges::unique(nodes1);
   nodes1.erase(unique_end, range_end);
@@ -144,32 +157,9 @@ std::tuple<Mesh<typename std::remove_reference_t<typename U::value_type>>, std::
       = dolfinx::MPI::distribute_data(comm, nodes1, commg, x, xshape[1]);
 
   // Create geometry object
-  Geometry geometry
-      = create_geometry(topology, element, nodes1, cells1, coords, xshape[1]);
+  Geometry geometry = create_geometry(topology, {element}, nodes1, nodees2, coords, xshape[1]);
 
   return {Mesh(comm, std::make_shared<Topology>(std::move(topology)), std::move(geometry)), std::move(remap)};
 }
-/*
-    TODO TODO
-
-     when using partitioner mesh is redistributed and thus tags needs to be redistributed !!!!
-     Complex as tag if on 'face' must be distributed using the cell on which it sets:
-            args !!!! does cell face order is maintened during distribution ?
-                      does face exist at this point ?
-                      Should we create faces before distribution ?
-                      A priori transfer_cell_meshtag can't be used in this case ?
-                      .....
-
-template <typename U,typename D>
-Mesh<typename std::remove_reference_t<typename U::value_type>> create_mesh(
-    MPI_Comm comm, MPI_Comm commt, std::span<const std::int64_t> cells,
-    const fem::CoordinateElement<
-        typename std::remove_reference_t<typename U::value_type>>& element,
-    MPI_Comm commg, const U& x, std::array<std::size_t, 2> xshape,
-    const CellPartitionFunction& partitioner,mesh::MeshTags<D>* tags)
-{
-}
-*/
-
 }  // namespace dolfinx::mesh
 #endif

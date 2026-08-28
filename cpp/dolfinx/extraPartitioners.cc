@@ -222,8 +222,8 @@ graph::partition_fn partitionerWithNodeWeight(std::vector<std::int32_t>& weights
          const int psize = dolfinx::MPI::size(pcomm);
          const idx_t num_local_nodes = graph.num_nodes();
          node_disp = std::vector<idx_t>(psize + 1, 0);
-         MPI_Allgather(&num_local_nodes, 1, dolfinx::MPI::mpi_type<idx_t>(), node_disp.data() + 1, 1,
-                       dolfinx::MPI::mpi_type<idx_t>(), pcomm);
+         MPI_Allgather(&num_local_nodes, 1, dolfinx::MPI::mpi_t<idx_t>, node_disp.data() + 1, 1,
+                       dolfinx::MPI::mpi_t<idx_t>, pcomm);
          std::partial_sum(node_disp.begin(), node_disp.end(), node_disp.begin());
          std::vector<idx_t> array(graph.array().begin(), graph.array().end());
          std::vector<idx_t> offsets(graph.offsets().begin(), graph.offsets().end());
@@ -326,8 +326,8 @@ graph::partition_fn partitionerWithEdgeWeight(std::vector<std::int32_t>& weights
          const int psize = dolfinx::MPI::size(pcomm);
          const idx_t num_local_nodes = graph.num_nodes();
          node_disp = std::vector<idx_t>(psize + 1, 0);
-         MPI_Allgather(&num_local_nodes, 1, dolfinx::MPI::mpi_type<idx_t>(), node_disp.data() + 1, 1,
-                       dolfinx::MPI::mpi_type<idx_t>(), pcomm);
+         MPI_Allgather(&num_local_nodes, 1, dolfinx::MPI::mpi_t<idx_t>, node_disp.data() + 1, 1,
+                       dolfinx::MPI::mpi_t<idx_t>, pcomm);
          std::partial_sum(node_disp.begin(), node_disp.end(), node_disp.begin());
          std::vector<idx_t> array(graph.array().begin(), graph.array().end());
          std::vector<idx_t> offsets(graph.offsets().begin(), graph.offsets().end());
@@ -460,8 +460,13 @@ graph::partition_fn graph::kahip::partitionerWithNodeWeight(std::vector<std::int
     common::Timer timer1("KaHIP: build adjacency data");
     std::vector<T> node_disp(dolfinx::MPI::size(comm) + 1, 0);
     const T num_local_nodes = graph.num_nodes();
-    MPI_Allgather(&num_local_nodes, 1, dolfinx::MPI::mpi_type<T>(),
-                  node_disp.data() + 1, 1, dolfinx::MPI::mpi_type<T>(), comm);
+
+    // KaHIP internally relies on an unsigned long long int type, which is not
+    // easily convertible to a general mpi type due to platform specific
+    // differences. So we can not rely on the general mpi_t<> mapping and do it
+    // by hand in this sole occurrence.
+    MPI_Allgather(&num_local_nodes, 1, MPI_UNSIGNED_LONG_LONG,
+                  node_disp.data() + 1, 1, MPI_UNSIGNED_LONG_LONG, comm);
     std::partial_sum(node_disp.begin(), node_disp.end(), node_disp.begin());
     std::vector<T> array(graph.array().begin(), graph.array().end());
     std::vector<T> offsets(graph.offsets().begin(), graph.offsets().end());
@@ -523,8 +528,13 @@ graph::partition_fn graph::kahip::partitioner_with_weight(std::vector<std::int32
     common::Timer timer1("KaHIP: build adjacency data");
     std::vector<T> node_disp(dolfinx::MPI::size(comm) + 1, 0);
     const T num_local_nodes = graph.num_nodes();
-    MPI_Allgather(&num_local_nodes, 1, dolfinx::MPI::mpi_type<T>(),
-                  node_disp.data() + 1, 1, dolfinx::MPI::mpi_type<T>(), comm);
+
+    // KaHIP internally relies on an unsigned long long int type, which is not
+    // easily convertible to a general mpi type due to platform specific
+    // differences. So we can not rely on the general mpi_t<> mapping and do it
+    // by hand in this sole occurrence.
+    MPI_Allgather(&num_local_nodes, 1, MPI_UNSIGNED_LONG_LONG,
+                  node_disp.data() + 1, 1, MPI_UNSIGNED_LONG_LONG, comm);
     std::partial_sum(node_disp.begin(), node_disp.end(), node_disp.begin());
     std::vector<T> array(graph.array().begin(), graph.array().end());
     std::vector<T> offsets(graph.offsets().begin(), graph.offsets().end());

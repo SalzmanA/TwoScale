@@ -21,12 +21,12 @@
 #include <vector>
 
 //#include "dolfinx/refinement/refine.h"
-#include "dolfinx/common/Scatterer.h"
 //#include "dolfinx/common/log.h"
 #include "dataTsPerMacro.h"
 #include "extraPartitioners.h"
 #include "extraRefine.h"
 #include "extraUtils.h"
+#include "util.h"
 #include "mpi.h"
 
 namespace twoscale
@@ -125,10 +125,10 @@ namespace impl
 template <typename K, typename T>
 void find_in(std::span<T> x, std::int32_t *idx, std::int32_t nbl, std::span<T> xc, std::int32_t *idxc, std::int32_t nblc,
              std::vector<std::int32_t> &surrounding_cells, std::vector<std::int32_t> &count_child,
-             std::vector<std::int32_t> &cell_child, std::shared_ptr<const graph::AdjacencyList<std::int32_t>> adj1,
-             std::shared_ptr<const graph::AdjacencyList<std::int32_t>> adj2,
-             std::shared_ptr<const graph::AdjacencyList<std::int32_t>> adj3,
-             std::shared_ptr<const graph::AdjacencyList<std::int32_t>> adj4, std::unordered_set<std::int32_t> &fine_node_master,
+             std::vector<std::int32_t> &cell_child, std::shared_ptr<const dolfinx::graph::AdjacencyList<std::int32_t>> adj1,
+             std::shared_ptr<const dolfinx::graph::AdjacencyList<std::int32_t>> adj2,
+             std::shared_ptr<const dolfinx::graph::AdjacencyList<std::int32_t>> adj3,
+             std::shared_ptr<const dolfinx::graph::AdjacencyList<std::int32_t>> adj4, std::unordered_set<std::int32_t> &fine_node_master,
              std::vector<std::int32_t> &coarse_interface_master, K tree_check)
 {
    for (auto cell_id : surrounding_cells)
@@ -289,9 +289,16 @@ void topDownWeight(dolfinx::mesh::Mesh<T> &mesh, std::vector<std::int32_t> &supp
 
       //std::println("parent  cell 00 {}: {}", std::get<1>(refined_data)->size(), *std::get<1>(refined_data));
 
-      // passe in coarse mesh numbering
-      std::transform(std::execution::seq, std::get<1>(refined_data)->begin(), std::get<1>(refined_data)->end(),
-                     std::get<1>(refined_data)->begin(), [&cell_map](std::int32_t x) { return cell_map[x]; });
+      {
+         std::int32_t nbcel = support.size();
+         std::vector<std::int32_t> sub_idx(nbcel);
+         for (auto i : std::views::iota(0, nbcel)) sub_idx[i] = i;
+         auto cell_coresp = cell_map.sub_topology_to_topology(sub_idx, false);
+
+         // passe in coarse mesh numbering
+         std::transform(std::execution::seq, std::get<1>(refined_data)->begin(), std::get<1>(refined_data)->end(),
+                        std::get<1>(refined_data)->begin(), [&cell_coresp](std::int32_t x) { return cell_coresp[x]; });
+      }
       parent = std::move(*std::get<1>(refined_data));
 
       //std::println("parent  cell 0 control {} {}: {}", (int)control, parent.size(), parent);
@@ -362,9 +369,9 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
    // This need_balance should be used to simplify
    // For now it avoid rebalancing, considering that refinement will not perturbate the load balancing. In this senario it might
    // be true as enriching all nodes is most of the time associated with refining at least all domain and refining further is also
-   // expect on all domain. It would be surprising that refining locally is intended in this case.
+   // expect on all domain. It would be suprissing that refining locally is intended in this case.
    if (!need_balance)
-      std::cout << "Alternate method would make sense !!!" << std::endl;
+      std::cout << "Alternate method would make sence !!!" << std::endl;
 
 
    // ==============================================
@@ -527,9 +534,9 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
       {
          if (agresive_weight)
          {
-            // ===================================
-            // generated aggressive element weight
-            // ===================================
+            // ==================================
+            // generated agressive element weight
+            // ==================================
             nbw = 1;
             weights.resize(nb_cells, 1);
             auto sg = topo->index_map(dim)->size_global();
@@ -804,7 +811,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
          topo->create_connectivity(dim, dimm1);
          topo->create_connectivity(dimm1, dim);
       }
-      assert(mesh::is_simplex(topo->cell_type()));
+      assert(dolfinx::mesh::is_simplex(topo->cell_type()));
       nb_face_per_cell = dim + 1;
    }
 
@@ -878,21 +885,15 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
       // PRINT("extra mark 0",mark);
 
       // local marked by comm from ghost
-      coarse_scatter_topo.scatter_rev(std::span<std::int8_t>(mark.begin(), mark.begin() + nbncl),
-                                      std::span<const std::int8_t>(mark.begin() + nbncl, mark.end()),
-                                      [](const std::int8_t &i, const std::int8_t &j) {
-                                         if (j > -1)
-                                            return j;
-                                         else
-                                            return i;
-                                      });
-
-      // PRINT("extra mark 1",std::ranges::count(mark,1));
-      // PRINT("extra mark 1",mark);
-
-      // ghost marked by comm from local
-      coarse_scatter_topo.scatter_fwd(std::span<const std::int8_t>(mark.begin(), mark.begin() + nbncl),
-                                      std::span<std::int8_t>(mark.begin() + nbncl, mark.end()));
+      // and ghost marked by comm from local
+      twoscale_dolfinx::scatter_rev_fwd(coarse_scatter_topo, std::span<std::int8_t>(mark.begin(), mark.begin() + nbncl),
+                                        std::span<std::int8_t>(mark.begin() + nbncl, mark.end()),
+                                        [](const std::int8_t &i, const std::int8_t &j) {
+                                           if (j > -1)
+                                              return j;
+                                           else
+                                              return i;
+                                        });
 
       // PRINT("extra mark 2",std::ranges::count(mark,1));
       // PRINT("extra mark 2",mark);
@@ -950,10 +951,8 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
 #if 0
    dolfinx::mesh::Mesh<T> mesh_support(mesh);
 #else
-   auto [mesh_support, cell_map, vertice_map, coord_map] =
-       dolfinx::mesh::create_submesh(mesh, dim, std::span<std::int32_t>(support.data(), support.size()));
 
-   if (cell_map.size() == 0)
+   if (support.size() == 0)
    {
       std::cerr << "Two scale suppose that support of enriched nodes is well balanced across process." << std::endl;
       std::cerr << "Apparently process " << pid << " do not hold any cell of the support and thus do not participate."
@@ -962,6 +961,10 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
 
       MPI_Abort(comm, -1);
    }
+
+   auto [mesh_support, cell_map, vertice_map, coord_map] =
+       dolfinx::mesh::create_submesh(mesh, dim, std::span<std::int32_t>(support.data(), support.size()));
+
    // std::cout<<pid<<"Cell map    "<<cell_map.size()<<" "; for (auto s : cell_map) std::cout << s << " " ;std::cout<<std::endl;
    // std::cout<<pid<<"Vertice map "<<vertice_map.size()<<" "; for (auto s : vertice_map) std::cout << s << " "
    // ;std::cout<<std::endl; std::cout<<pid<<"Coord map   "<<coord_map.size()<<" "; for (auto s : coord_map) std::cout << s << " "
@@ -1007,9 +1010,17 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
       // std::cout<<pid << "parent  cell 00     " << std::get<1>(refined_data)->size() << ": "; for (auto s :
       // *std::get<1>(refined_data)) std::cout << s << " "; std::cout << std::endl;
 
-      // passe in coarse mesh numbering
-      std::transform(std::execution::seq, std::get<1>(refined_data)->begin(), std::get<1>(refined_data)->end(),
-                     std::get<1>(refined_data)->begin(), [&cell_map](std::int32_t x) { return cell_map[x]; });
+      //
+      {
+         std::int32_t nbcel = support.size();
+         std::vector<std::int32_t> sub_idx(nbcel);
+         for (auto i : std::views::iota(0, nbcel)) sub_idx[i] = i;
+         auto cell_coresp = cell_map.sub_topology_to_topology(sub_idx, false);
+
+         // passe in coarse mesh numbering
+         std::transform(std::execution::seq, std::get<1>(refined_data)->begin(), std::get<1>(refined_data)->end(),
+                        std::get<1>(refined_data)->begin(), [&cell_coresp](std::int32_t x) { return cell_coresp[x]; });
+      }
       parent = std::move(*std::get<1>(refined_data));
 
       // std::cout<<pid << "parent  cell 0     " << parent.size() << ": "; for (auto s : parent) std::cout << s << " "; std::cout
@@ -1339,7 +1350,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
       // PRINT("mark_c 0 ",mark_c);
 
       // gather remote identified node localy as a mark
-      coarse_scatter.scatter_rev(std::span<std::int8_t>(mark_c.begin(), mark_c.begin() + nbncl),
+      twoscale_dolfinx::scatter_rev(coarse_scatter,std::span<std::int8_t>(mark_c.begin(), mark_c.begin() + nbncl),
                                  std::span<const std::int8_t>(mark_c.begin() + nbncl, mark_c.end()),
                                  [](const std::int8_t &i, const std::int8_t &j) {
                                     if (j > -1)
@@ -1448,8 +1459,8 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
    // using topological ghost indexing to fit to cell node idexing
    {
       dolfinx::common::Scatterer fine_scatter(*idxmap0f, 1);
-      fine_scatter.scatter_fwd(std::span<const std::int64_t>(glob_idx_f.begin(), glob_idx_f.begin() + nbnfl),
-                               std::span<std::int64_t>(glob_idx_f.begin() + nbnfl, glob_idx_f.end()));
+      twoscale_dolfinx::scatter_fwd(fine_scatter, std::span<const std::int64_t>(glob_idx_f.begin(), glob_idx_f.begin() + nbnfl),
+                                    std::span<std::int64_t>(glob_idx_f.begin() + nbnfl, glob_idx_f.end()));
 
       // PRINT("g index f after offset", glob_idx_f);
    }
@@ -1465,7 +1476,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
    // PRINT("g index c fgi ",glob_idx_c);
 
    // gather remote identified node localy with correct new idx
-   coarse_scatter.scatter_rev(std::span<std::int64_t>(glob_idx_c.begin(), glob_idx_c.begin() + nbncl),
+   twoscale_dolfinx::scatter_rev(coarse_scatter,std::span<std::int64_t>(glob_idx_c.begin(), glob_idx_c.begin() + nbncl),
                               std::span<const std::int64_t>(glob_idx_c.begin() + nbncl, glob_idx_c.end()),
                               [](const std::int64_t &i, const std::int64_t &j) {
                                  // PRINT("i", i);
@@ -1501,8 +1512,9 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
    // PRINT("g index c3", glob_idx_c);
    assert(k <= nbncl_not_in_f);
    // for ghost index simply scatter new global index to ghost location with topological ghost index to fit to cell node idexing
-   coarse_scatter_topo.scatter_fwd(std::span<const std::int64_t>(glob_idx_c.begin(), glob_idx_c.begin() + nbncl),
-                                   std::span<std::int64_t>(glob_idx_c.begin() + nbncl, glob_idx_c.end()));
+   twoscale_dolfinx::scatter_fwd(coarse_scatter_topo,
+                                 std::span<const std::int64_t>(glob_idx_c.begin(), glob_idx_c.begin() + nbncl),
+                                 std::span<std::int64_t>(glob_idx_c.begin() + nbncl, glob_idx_c.end()));
 
    // PRINT("g index c4", glob_idx_c);
 
@@ -1998,7 +2010,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
 
          // ghost to local
          dolfinx::common::Scatterer coarse_face_scatterer(*idxmap1c, 1);
-         coarse_face_scatterer.scatter_rev(std::span<std::int8_t>(exchange.begin(), exchange.begin() + nbfcl),
+         twoscale_dolfinx::scatter_rev(coarse_face_scatterer,std::span<std::int8_t>(exchange.begin(), exchange.begin() + nbfcl),
                                            std::span<const std::int8_t>(exchange.begin() + nbfcl, exchange.end()),
                                            [](const std::int8_t &i, const std::int8_t &j) -> std::int8_t {
                                               if (j > -1)
@@ -2034,8 +2046,9 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
 
          // local to ghost
          // all local with 1 are ok. local with 0 not modified by ghost remain indeterminated
-         coarse_face_scatterer.scatter_fwd(std::span<const std::int8_t>(exchange.begin(), exchange.begin() + nbfcl),
-                                           std::span<std::int8_t>(exchange.begin() + nbfcl, exchange.end()));
+         twoscale_dolfinx::scatter_fwd(coarse_face_scatterer,
+                                       std::span<const std::int8_t>(exchange.begin(), exchange.begin() + nbfcl),
+                                       std::span<std::int8_t>(exchange.begin() + nbfcl, exchange.end()));
 
          // PRINT("exchange 4 count",std::ranges::count(exchange,1));
          // PRINT("exchange 4 count",std::ranges::count(exchange,0));
@@ -2061,7 +2074,7 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
          // PRINT("exchange 5",exchange);
 
          // ghost to local again as previous step can have change ghost and thus mus be propagated to owner
-         coarse_face_scatterer.scatter_rev(std::span<std::int8_t>(exchange.begin(), exchange.begin() + nbfcl),
+         twoscale_dolfinx::scatter_rev(coarse_face_scatterer,std::span<std::int8_t>(exchange.begin(), exchange.begin() + nbfcl),
                                            std::span<const std::int8_t>(exchange.begin() + nbfcl, exchange.end()),
                                            [](const std::int8_t &i, const std::int8_t &j) -> std::int8_t {
                                               if (j > -1)
@@ -2089,17 +2102,15 @@ twoscale::scaleJump<dolfinx::mesh::Mesh<T>> topDown(dolfinx::mesh::Mesh<T> &mesh
          std::vector<std::int8_t> mark(nbnnnl + ghostn_t.size(), -1);
          for (auto v : fine_node_master) mark[v] = 1;
          // mix remote and local
-         fine_scatterer.scatter_rev(std::span<std::int8_t>(mark.begin(), mark.begin() + nbnnnl),
-                                    std::span<const std::int8_t>(mark.begin() + nbnnnl, mark.end()),
-                                    [](const std::int8_t &i, const std::int8_t &j) {
-                                       if (j > -1)
-                                          return j;
-                                       else
-                                          return i;
-                                    });
-         // impose local mixed to ghost
-         fine_scatterer.scatter_fwd(std::span<const std::int8_t>(mark.begin(), mark.begin() + nbnnnl),
-                                    std::span<std::int8_t>(mark.begin() + nbnnnl, mark.end()));
+         // and impose local mixed to ghost
+         twoscale_dolfinx::scatter_rev_fwd(fine_scatterer, std::span<std::int8_t>(mark.begin(), mark.begin() + nbnnnl),
+                                           std::span<std::int8_t>(mark.begin() + nbnnnl, mark.end()),
+                                           [](const std::int8_t &i, const std::int8_t &j) {
+                                              if (j > -1)
+                                                 return j;
+                                              else
+                                                 return i;
+                                           });
          // complete fine_node_master
          std::int32_t k = 0;
          for (auto m : mark)

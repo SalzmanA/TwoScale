@@ -29,7 +29,7 @@
    if (ierr)                                                                           \
    {                                                                                   \
       const char *desc;                                                                \
-      char *extr;                                                                      \
+      const char *extr;                                                                      \
       PetscErrorMessage(ierr, &desc, &extr);                                           \
       std::cout << msg << ": " << desc << " (" << ierr << ") / " << extr << std::endl; \
       MPI_Abort(comm, -ierr);                                                          \
@@ -173,5 +173,110 @@ class enrichedDofIDs
 /// Function that tells if library is using or no the nested matrix strategy
 bool useNest();
 
+/// Function encapsulating a simple scatter fwd operation
+/// It use *MPI neighbourhood collective communication*
+/// @param[in] l Buffer containing local data to send
+/// @param[out] g Buffer containing local ghost data to be updated
+/// @tparam S Type of the scatterer object
+/// @tparam T Type of the data to be exchanged
+template <typename S, typename T>
+void scatter_fwd(S &scatterer, std::span<const T> l, std::span<T> g)
+{
+   MPI_Request request = MPI_REQUEST_NULL;
+   auto &idxl = scatterer.local_indices();
+   auto nb_idxl = idxl.size();
+   auto &idxr = scatterer.remote_indices();
+   auto nb_idxr = idxr.size();
+   std::vector<T> bufferA(nb_idxl, 0);
+   std::vector<T> bufferB(nb_idxr, 0);
+   // pack
+   for (std::size_t i = 0; i < nb_idxl; ++i) bufferA[i] = l[idxl[i]];
+
+   // exchange
+   scatterer.scatter_fwd_begin(bufferA.data(), bufferB.data(), request);
+   scatterer.scatter_end(request);
+
+   // unpack
+   for (std::size_t i = 0; i < nb_idxr; ++i) g[idxr[i]] = bufferB[i];
+}
+/// Function encapsulating a simple scatter rev operation
+/// It use *MPI neighbourhood collective communication*
+/// @param[out] l Buffer containing local data to be updated
+/// @param[in] g Buffer containing local ghost data to send
+/// @param[in] op binary operator that takes current local value and received corresponding value as argument. It returns local
+/// value to set.
+/// @tparam S Type of the scatterer object
+/// @tparam T Type of the data to be exchanged
+/// @tparam S Type of the binary operator argument
+template <typename S, typename T, typename BinaryOp>
+void scatter_rev(S &scatterer, std::span<T> l, std::span<const T> g, BinaryOp op)
+{
+   MPI_Request request = MPI_REQUEST_NULL;
+   auto &idxl = scatterer.local_indices();
+   auto nb_idxl = idxl.size();
+   auto &idxr = scatterer.remote_indices();
+   auto nb_idxr = idxr.size();
+   std::vector<T> bufferA(nb_idxr, 0);
+   std::vector<T> bufferB(nb_idxl, 0);
+   // pack
+   for (std::size_t i = 0; i < nb_idxr; ++i) bufferA[i] = g[idxr[i]];
+
+   // exchange
+   scatterer.scatter_rev_begin(bufferA.data(), bufferB.data(), request);
+   scatterer.scatter_end(request);
+
+   // unpack
+   for (std::size_t i = 0; i < nb_idxl; ++i)
+   {
+      auto &li = l[idxl[i]];
+      // apply operator
+      li = op(li, bufferB[i]);
+   }
+}
+/// Function encapsulating a scatter rev followed by fwd operation
+/// It use *MPI neighbourhood collective communication*
+/// @param[in,out] l Buffer containing local data to update and send
+/// @param[in,out] g Buffer containing local ghost data to send and update
+/// @param[in] op binary operator that takes current local value and received corresponding value as argument. It returns local
+/// value to set.
+/// @tparam S Type of the scatterer object
+/// @tparam T Type of the data to be excanged
+/// @tparam S Type of the binary operator argument
+template <typename S, typename T, typename BinaryOp>
+void scatter_rev_fwd(S &scatterer, std::span<T> l, std::span<T> g, BinaryOp op)
+{
+   MPI_Request request = MPI_REQUEST_NULL;
+   auto &idxl = scatterer.local_indices();
+   auto nb_idxl = idxl.size();
+   auto &idxr = scatterer.remote_indices();
+   auto nb_idxr = idxr.size();
+   std::vector<T> bufferA(nb_idxr, 0);
+   std::vector<T> bufferB(nb_idxl, 0);
+   // pack
+   for (std::size_t i = 0; i < nb_idxr; ++i) bufferA[i] = g[idxr[i]];
+
+   // exchange
+   scatterer.scatter_rev_begin(bufferA.data(), bufferB.data(), request);
+   scatterer.scatter_end(request);
+
+   // unpack/pack
+   for (std::size_t i = 0; i < nb_idxl; ++i)
+   {
+      auto &ri = bufferB[i];
+      auto &li = l[idxl[i]];
+      // apply operator and unpack
+      li = op(li, ri);
+      // pack
+      ri = li;
+   }
+
+   // exchange
+   scatterer.scatter_fwd_begin(bufferB.data(), bufferA.data(), request);
+   scatterer.scatter_end(request);
+
+   // unpack
+   for (std::size_t i = 0; i < nb_idxr; ++i) g[idxr[i]] = bufferA[i];
+
+}
 }  // namespace twoscale_dolfinx
 #endif

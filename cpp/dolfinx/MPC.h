@@ -22,7 +22,7 @@ namespace twoscale_dolfinx
 /// @param j The scaleJump object describing coarse/fine mesh and their relations
 /// @param space The fine scale disretization space
 template <dolfinx::scalar T,
-          std::floating_point U = dolfinx::scalar_value_type_t<T>>
+          std::floating_point U = dolfinx::scalar_value_t<T>>
 dolfinx_mpc::mpc_data<T> generateMPC(const twoscale::scaleJump<dolfinx::mesh::Mesh<U>> &j,
                                                     std::shared_ptr<const dolfinx::fem::FunctionSpace<U>> space);
 

@@ -184,7 +184,7 @@ namespace twoscale_dolfinx
 /// @param mpc if any, multi point constrain used to connect fine field dof at support interface
 /// @param bc a vector of Dirichlet  boundary conditions, if any, to be imposed at coarse scale 
 ///
-template <dolfinx::scalar T, std::floating_point U = dolfinx::scalar_value_type_t<T>>
+template <dolfinx::scalar T, std::floating_point U = dolfinx::scalar_value_t<T>>
 twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJump<dolfinx::mesh::Mesh<U>> &j,
                                                         std::shared_ptr<const dolfinx::fem::FunctionSpace<U>> fine_space,
                                                         std::shared_ptr<const dolfinx::fem::FunctionSpace<U>> coarse_space,
@@ -198,7 +198,7 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
 /// @param coarse_enriched_space The coarse scale enriched disretization space
 /// @param mpc if any, multi point constrain used to connect fine field dof at support interface
 /// @param bc a vector of Dirichlet  boundary conditions, if any, to be imposed at coarse scale on enriched field
-template <dolfinx::scalar T, std::floating_point U = dolfinx::scalar_value_type_t<T>>
+template <dolfinx::scalar T, std::floating_point U = dolfinx::scalar_value_t<T>>
 twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJump<dolfinx::mesh::Mesh<U>> &j,
                                                         std::shared_ptr<const dolfinx::fem::FunctionSpace<U>> fine_space,
                                                         std::shared_ptr<const dolfinx::fem::FunctionSpace<U>> coarse_enriched_space,
