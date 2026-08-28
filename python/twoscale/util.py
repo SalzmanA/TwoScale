@@ -405,8 +405,8 @@ if _ts_dolfinx_exist:
                 xl=sc.tabulate_dof_coordinates()
             idxmap=sc.dofmap.index_map
             lab=[]
-            for i in range(len(mapping)):
-                j=mapping[i]
+            for i in range(len(mapping[0])):
+                j=mapping[0][i]
                 if firstsub:
                     if i<idxmap.size_local:
                         lab.append("{}({}):{}({})".format(glob_label[j]//bs,loc_label[j]//bs,glob_label[j],loc_label[j]))
