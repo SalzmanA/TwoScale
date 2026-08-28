@@ -11,6 +11,10 @@
 #include <unordered_map>
 #include <mpi.h>
 #include <basix/mdspan.hpp>
+#ifdef HAS_PETSC
+#include <petscsystypes.h>
+#include <petscversion.h>
+#endif
 
 #ifdef __GNUC__
 #define TS_MACRO_WARNUNUSEDTYPE  __attribute__((unused))
@@ -25,24 +29,42 @@
       std::cout << msg << ": " << ierr << std::endl; \
       MPI_Abort(comm, -1);                           \
    }
+#ifdef HAS_PETSC
+#if PETSC_VERSION_GE(3, 25, 0)
 #define CHECK(ierr, msg, comm)                                                         \
    if (ierr)                                                                           \
    {                                                                                   \
       const char *desc;                                                                \
-      const char *extr;                                                                      \
+      const char *extr;                                                                \
       PetscErrorMessage(ierr, &desc, &extr);                                           \
       std::cout << msg << ": " << desc << " (" << ierr << ") / " << extr << std::endl; \
       MPI_Abort(comm, -ierr);                                                          \
    }
+#else
+#define CHECK(ierr, msg, comm)                                                         \
+   if (ierr)                                                                           \
+   {                                                                                   \
+      const char *desc;                                                                \
+      char *extr;                                                                      \
+      PetscErrorMessage(ierr, &desc, &extr);                                           \
+      std::cout << msg << ": " << desc << " (" << ierr << ") / " << extr << std::endl; \
+      MPI_Abort(comm, -ierr);                                                          \
+   }
+#endif
+#else
+#define CHECK(ierr, msg, comm)                                                         \
+   if (ierr)                                                                           \
+   {                                                                                   \
+      std::cout << msg << ": " <<  ierr << std::endl;                                  \
+      MPI_Abort(comm, -ierr);                                                          \
+   }
+#endif
 #define DO(cmd, msg, comm)       \
    {                             \
       PetscErrorCode ierr = cmd; \
       CHECK(ierr, msg, comm)     \
    }
 
-#ifdef HAS_PETSC
-#include <petscsystypes.h>
-#endif
 namespace twoscale
 {
 template <typename T, typename F, typename W>
