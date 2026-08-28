@@ -11,8 +11,6 @@ execute:
   execute_notebooks: auto
   exclude_patterns:
     - "doc/damaged/pull_out.ipynb"
-    - "doc/elasticity/stepbystep2D.ipynb"
-    - "doc/elasticity/analytical3Delasticity.ipynb"
   timeout: 240
 #run_in_temp: True
 
