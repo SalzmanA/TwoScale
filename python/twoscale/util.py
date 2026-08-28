@@ -66,8 +66,8 @@ if _ts_dolfinx_exist:
             A = dolfinx_cpp.la.petsc.create_matrix(MPC.function_space.mesh.comm, pattern)
             AD = dolfinx_cpp.la.petsc.create_matrix(MPC.function_space.mesh.comm, pattern)
             # generate rhs
-            B=la.create_petsc_vector(MPC.function_space.dofmap.index_map,MPC.function_space.dofmap.index_map_bs)
-            BD=la.create_petsc_vector(MPC.function_space.dofmap.index_map,MPC.function_space.dofmap.index_map_bs)
+            B=la.petsc.create_vector([(MPC.function_space.dofmap.index_map,MPC.function_space.dofmap.index_map_bs)])
+            BD=la.petsc.create_vector([(MPC.function_space.dofmap.index_map,MPC.function_space.dofmap.index_map_bs)])
             # Assemble matrix
             A.zeroEntries()
             dolfinx_mpc.assemble_matrix(forma,MPC,A=A)
@@ -92,8 +92,8 @@ if _ts_dolfinx_exist:
             A = fem.petsc.create_matrix(forma)
             AD = fem.petsc.create_matrix(formad)
             # generate rhs
-            B=fem.petsc.create_vector(formb)
-            BD=fem.petsc.create_vector(formbd)
+            B=fem.petsc.create_vector(formb.function_spaces)
+            BD=fem.petsc.create_vector(formbd.function_spaces)
             #  Set matrix and vector PETSc options. Needs to be set ??
             A.setFromOptions()
             AD.setFromOptions()
@@ -409,9 +409,9 @@ if _ts_dolfinx_exist:
                 j=mapping[i]
                 if firstsub:
                     if i<idxmap.size_local:
-                        lab.append("{}({})|{}({})".format(glob_label[j]//bs,loc_label[j]//bs,glob_label[j],loc_label[j]))
+                        lab.append("{}({}):{}({})".format(glob_label[j]//bs,loc_label[j]//bs,glob_label[j],loc_label[j]))
                     else:
-                        lab.append("R:{}({})|{}({})".format(glob_label[j]//bs,loc_label[j]//bs,glob_label[j],loc_label[j]))
+                        lab.append("R:{}({}):{}({})".format(glob_label[j]//bs,loc_label[j]//bs,glob_label[j],loc_label[j]))
                 else:
                     lab.append("{}({})".format(glob_label[j],loc_label[j]))
             labs.append(lab)

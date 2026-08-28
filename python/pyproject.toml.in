@@ -9,27 +9,16 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "twoscale"
-dynamic = ["version"]
+version = "@PROJECT_VERSION@"
 description = "An implementation of the distributed two scale method"
 authors = [
     { name = "Alexis Salzman", email = "alexis.salzman@ec-nantes.fr" },
 ]
 readme = "README.md"
 dependencies = [
-    "fenics-dolfinx>=0.9.0,<0.10.0",
+    "fenics-dolfinx>=@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@,<@PROJECT_VERSION_MAJOR@.@DOLFINX_NEXT_MINOR@",
 ]
 
 [tool.scikit-build]
 cmake.build-type = "Release"
 wheel.packages = ["twoscale"]
-
-[tool.scikit-build.metadata.version]
-provider = "scikit_build_core.metadata.regex"
-input = "../cpp/CMakeLists.txt"
-regex = '''(?sx)
-project\s*\([^)]*
-VERSION\s+
-(?:"|')?
-(?P<value>[0-9A-Za-z.+-]+)
-'''
-

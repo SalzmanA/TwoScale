@@ -4,6 +4,15 @@ cmake_minimum_required(VERSION 3.21)
 project(Twoscale VERSION "0.10.0")
 
 # ===============================================================================================
+# pyproject.toml generation from VERSION above
+math( EXPR DOLFINX_NEXT_MINOR "${PROJECT_VERSION_MINOR}+1" )
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/../python/pyproject.toml.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../python/pyproject.toml"
+    @ONLY
+)
+
+# ===============================================================================================
 # options
 include(FeatureSummary)
 option(BUILD_SHARED_LIBS "Build two-scale with shared libraries." ON)

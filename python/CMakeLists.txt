@@ -10,7 +10,7 @@ add_feature_info(CMAKE_INSTALL_RPATH_USE_LINK_PATH CMAKE_INSTALL_RPATH_USE_LINK_
 
 # ===============================================================================================
 # nanobind 
-find_package(Python COMPONENTS Interpreter Development REQUIRED)
+find_package(Python COMPONENTS Interpreter Development ${SKBUILD_SABI_COMPONENT} REQUIRED)
 # Detect the installed nanobind package and import it into CMake
 execute_process(
   COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
@@ -37,8 +37,14 @@ endif()
 # ===============================================================================================
 # Create the binding library nanobind handles its own calls to
 # target_link_libraries
+
+if(NOT "${SKBUILD_SABI_VERSION}" STREQUAL "")
+  set(NANOBIND_SABI "STABLE_ABI")
+endif()
+
 nanobind_add_module(
   ts_cpp
+  ${NANOBIND_SABI}
   twoscale/binding/ts.cc
 )
 if (TARGET twoscale_dolfinx)

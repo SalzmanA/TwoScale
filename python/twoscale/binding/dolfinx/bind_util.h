@@ -16,7 +16,7 @@
 #include <petscmat.h>
 #if defined(HAS_DOLFINX_PY)
 // dolfinx warper to encapsulate Mat and Vec petsc types into nanobind type_caster
-#include "caster_petsc.h"
+#include "dolfinx_wrappers/caster_petsc.h"
 #endif
 #endif
 

@@ -157,7 +157,7 @@ std::tuple<Mesh<typename std::remove_reference_t<typename U::value_type>>, std::
       = dolfinx::MPI::distribute_data(comm, nodes1, commg, x, xshape[1]);
 
   // Create geometry object
-  Geometry geometry = create_geometry(topology, {element}, nodes1, nodees2, coords, xshape[1]);
+  Geometry geometry = create_geometry(topology, {element}, nodes1, nodes2, coords, xshape[1]);
 
   return {Mesh(comm, std::make_shared<Topology>(std::move(topology)), std::move(geometry)), std::move(remap)};
 }
