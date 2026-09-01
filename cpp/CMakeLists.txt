@@ -23,6 +23,9 @@ option(USE_PETSC_MATNEST "Use PETSc nested matrix format." ON)
 add_feature_info(USE_PETSC_MATNEST USE_PETSC_MATNEST "Use PETSc nested matrix format.")
 option(CMAKE_INSTALL_RPATH_USE_LINK_PATH "Add paths to linker search and installed rpath." ON)
 add_feature_info(CMAKE_INSTALL_RPATH_USE_LINK_PATH CMAKE_INSTALL_RPATH_USE_LINK_PATH "Add paths to linker search and installed rpath.")
+option(ENABLE_TESTING       "Create executables for testing (ctest)." ON)
+add_feature_info(ENABLE_TESTING ENABLE_TESTING "Create executables for testing (ctest).")
+
 
 
 # ===============================================================================================

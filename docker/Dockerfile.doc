@@ -22,6 +22,7 @@ RUN cmake -S cpp -B build-cpp \
        -DCMAKE_INSTALL_PREFIX=/usr/local\
        -DCMAKE_INSTALL_LIBDIR=/usr/local/lib
 RUN cmake --build build-cpp 
+RUN ctest --test-dir build-cpp/dolfinx --output-on-failure
 RUN cmake --install build-cpp
 
 # Build and install the Python package

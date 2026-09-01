@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0" xmlns:xi="https://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="neper_dam" GridType="Uniform">
+      <Topology TopologyType="Triangle" NumberOfElements="98" NodesPerElement="3">
+        <DataItem Dimensions="98 3" NumberType="Int" Format="HDF">square.h5:/Mesh/neper_dam/topology</DataItem>
+      </Topology>
+      <Geometry GeometryType="XY">
+        <DataItem Dimensions="62 2" Format="HDF">square.h5:/Mesh/neper_dam/geometry</DataItem>
+      </Geometry>
+    </Grid>
+    <Grid Name="neper_dam_cells" GridType="Uniform">
+      <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@Name='neper_dam']/Geometry)" />
+      <Topology TopologyType="Triangle" NumberOfElements="98" NodesPerElement="3">
+        <DataItem Dimensions="98 3" NumberType="Int" Format="HDF">square.h5:/MeshTags/neper_dam_cells/topology</DataItem>
+      </Topology>
+      <Attribute Name="neper_dam_cells" AttributeType="Scalar" Center="Cell">
+        <DataItem Dimensions="98 1" Format="HDF">square.h5:/MeshTags/neper_dam_cells/Values</DataItem>
+      </Attribute>
+    </Grid>
+    <Grid Name="neper_dam_facets" GridType="Uniform">
+      <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@Name='neper_dam']/Geometry)" />
+      <Topology TopologyType="PolyLine" NumberOfElements="31" NodesPerElement="2">
+        <DataItem Dimensions="31 2" NumberType="Int" Format="HDF">square.h5:/MeshTags/neper_dam_facets/topology</DataItem>
+      </Topology>
+      <Attribute Name="neper_dam_facets" AttributeType="Scalar" Center="Cell">
+        <DataItem Dimensions="31 1" Format="HDF">square.h5:/MeshTags/neper_dam_facets/Values</DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

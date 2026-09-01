@@ -85,5 +85,16 @@ install(
   COMPONENT Development
 )
 
+# ===============================================================================================
+# testing
+if(ENABLE_TESTING)
+  enable_testing()
+
+  # test directory
+  add_subdirectory(test)
+
+endif(ENABLE_TESTING)
+
+
 
 
