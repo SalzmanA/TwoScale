@@ -2,5 +2,8 @@
   Copyright (C) 2026 - Ecole Centrale de Nantes<br>
   Author: Alexis Salzman<br>
   Licences CC-BY-NC-ND <img src="{{ pathto('_static/cc-by-nc-nd.png', 1) }}" alt="CC-BY-NC-ND" width="50" height="18"><br>
-  Project version: @PROJECT_VERSION@
+  <img
+  alt="Project version: @PROJECT_VERSION@"
+  src="https://img.shields.io/badge/dynamic/regex?label=Project%20version&amp;url=https%3A%2F%2Fraw.githubusercontent.com%2FSalzmanA%2FTwoScale%2Fmain%2Fcpp%2FCMakeLists.txt&amp;search=project%5C%28Twoscale%20VERSION%20%22%28%5B0-9.%5D%2B%29%22&amp;replace=%241" />
+  
 </p>
