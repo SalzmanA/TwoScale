@@ -10,7 +10,7 @@ Finally in API part you will find {ref}`Python` and {ref}`C++` detailed document
 
 
 [![Source](https://img.shields.io/badge/GitHub-Source%20code-green?logo=github)](https://github.com/SalzmanA/TwoScale)
-
+![GitHub Released](https://img.shields.io/github/v/release/Salzmana/TwoScale?label=Last%20Released%20version)
 
 
 
