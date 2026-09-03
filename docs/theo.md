@@ -1,5 +1,5 @@
 (theo)=
-## Theorical concept 
+## Theoretical concept 
 
 
 ![TopDown discretisation](./TS1.png)
