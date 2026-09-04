@@ -7,9 +7,7 @@ Full explanations on the library with examples can be found in the [documentatio
 
 ## License
 
-Copyright (c) 2026 - Ecole Centrale de Nantes
-
-Author: Alexis Salzman
+Copyright (C) 2026 - Alexis Salzman, Ecole Centrale de Nantes
 
 All c++/python sources are under GNU LGPL license given in COPYING.LESSER file
 

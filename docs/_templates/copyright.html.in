@@ -1,6 +1,5 @@
 <p>
-  Copyright (C) 2026 - Ecole Centrale de Nantes<br>
-  Author: Alexis Salzman<br>
+  Copyright (C) 2026 - Alexis Salzman, Ecole Centrale de Nantes<br>
   Licences CC-BY-NC-ND <img src="{{ pathto('_static/cc-by-nc-nd.png', 1) }}" alt="CC-BY-NC-ND" width="50" height="18"><br>
   <img
   alt="Project version: @PROJECT_VERSION@"

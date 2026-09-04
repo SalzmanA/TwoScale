@@ -1,8 +1,7 @@
 /*
  * Copyright (C) 2010-2024 Garth N. Wells and Paul T. Kühner
  *
- * Copyright (C) 2026 - Ecole Centrale de Nantes
- * Author: Alexis Salzman
+ * Copyright (C) 2026 - Alexis Salzman, Ecole Centrale de Nantes
  *
  * This code is extracted from DOLFINx and slightly modified to take into account element reordering in create_mesh.
  * use for that custom create_mesh that provides cell mapping.

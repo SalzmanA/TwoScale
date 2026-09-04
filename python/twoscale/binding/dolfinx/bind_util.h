@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2026 - Ecole Centrale de Nantes
- * Author: Alexis Salzman
+ * Copyright (C) 2026 - Alexis Salzman, Ecole Centrale de Nantes
  *
  * SPDX-License-Identifier:    LGPL-3.0-or-later
  */

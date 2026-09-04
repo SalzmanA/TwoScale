@@ -1,8 +1,7 @@
 /*
  * Copyright (C) 2019-2024 Garth N. Wells
  *
- * Copyright (C) 2026 - Ecole Centrale de Nantes
- * Author: Alexis Salzman
+ * Copyright (C) 2026 - Alexis Salzman, Ecole Centrale de Nantes
  *
  * This code is extracted from DOLFINx and slightly modified to return element reordering.
  *

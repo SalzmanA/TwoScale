@@ -1,8 +1,7 @@
 /*
  * Copyright (C) 2019-2020 Garth N. Wells, Chris Richardson and Igor A. Baratta
  *
- * Copyright (C) 2026 - Ecole Centrale de Nantes
- * Author: Alexis Salzman
+ * Copyright (C) 2026 - Alexis Salzman, Ecole Centrale de Nantes
  *
  * This is partially extracted from partitioners.cpp of dolfinx 0.9.0 project 
  *
