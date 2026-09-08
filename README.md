@@ -22,9 +22,11 @@ The idea is to keep pace with fenicsx releases.
 As a result, two updates in quick succession made the library compatible with versions 0.10 and 0.11 without really taking into account the improvements introduced by those versions.
 The current state of implementation is therefore somewhat incomplete (it is based on the features of version 0.9 but is compatible with version 0.11) and is likely to change.
 
+
 ## reference
 
 [DKBabuvska07] C. A. Duarte, Dae-Jin Kim, and Ivo Babuška. A global-local approach for the construction of enrichment functions for the generalized fem and its application to three-dimensional cracks. In V. M. A. Leitão, C. J. S. Alves, and C. Armando Duarte, editors, Advances in Meshfree Techniques, 1–26. Dordrecht, 2007. Springer Netherlands.
 
 [SMoes23] Alexis Salzman and Nicolas Moës. A two-scale solver for linear elasticity problems in the context of parallel message passing. Computer Methods in Applied Mechanics and Engineering, 407:115914, 2023. URL: https://www.sciencedirect.com/science/article/pii/S0045782523000373, doi:https://doi.org/10.1016/j.cma.2023.115914.
 
+[![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2FSalzmanA%2FTwoScale-blue?logo=docker)](https://github.com/SalzmanA/TwoScale/pkgs/container/twoscale)
