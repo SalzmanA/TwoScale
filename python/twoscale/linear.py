@@ -2,11 +2,10 @@
 #
 # SPDX-License-Identifier:    LGPL-3.0-or-later
 """module that provides TwoScale linear solvers tools."""
-from twoscale import ts_cpp as _cpp
-
+import importlib
 _ts_dolfinx_exist=False
 try:
-    import twoscale.ts_cpp.dolfinx as _ts
+    importlib.import_module("twoscale.ts_cpp.dolfinx")
     _ts_dolfinx_exist=True
 except ImportError:
     print ("Twoscale dolfinx implementation not available")
@@ -112,7 +111,7 @@ if _ts_dolfinx_exist:
         """
         # check coherance with mpc
         do_mpc=sj.needs_mpc
-        if do_mpc and mpc==None:
+        if do_mpc and mpc is None:
             raise RuntimeError("scale jump provided expect MPC creation and you provide no mpc !")
 
         # solution field at fine scale
@@ -161,8 +160,6 @@ if _ts_dolfinx_exist:
         # use max
         nm=max(nb,nr)
         epsr=nm*eps
-
-        master=(enriched_field.function_space.mesh.comm.rank==0)
 
         # enter the loop
         stage1 = PETSc.Log.Stage("solvePM")
@@ -254,7 +251,7 @@ if _ts_dolfinx_exist:
         """
         # check coherance with mpc
         do_mpc=sj.needs_mpc
-        if do_mpc and mpc==None:
+        if do_mpc and mpc is None:
             raise RuntimeError("scale jump provided expect MPC creation and you provide no mpc !")
 
         # solution field at fine scale
@@ -303,8 +300,6 @@ if _ts_dolfinx_exist:
         # use max
         nm=max(nb,nr)
         epsr=nm*eps
-
-        master=(enriched_field.function_space.mesh.comm.rank==0)
 
         # enter the loop
         stage1 = PETSc.Log.Stage("solvePMI")
@@ -404,7 +399,7 @@ if _ts_dolfinx_exist:
         """
         # check coherance with mpc
         do_mpc=sj.needs_mpc
-        if do_mpc and mpc==None:
+        if do_mpc and mpc is None:
             raise RuntimeError("scale jump provided expect MPC creation and you provide no mpc !")
 
         # solution field at fine scale
@@ -498,7 +493,7 @@ if _ts_dolfinx_exist:
             plt.subplot(0,0)
             plt.add_mesh(warped,show_edges=True,show_scalar_bar=True)
             plt.add_title("iter 0: {}".format(ra/nm),font_size=8)
-            if not camera==None:
+            if camera is not None:
                 plt.camera_position=camera
             if patch:
                 plt.subplot(0,2)
@@ -530,7 +525,7 @@ if _ts_dolfinx_exist:
                 if master:
                     plt.add_mesh(warpedf,show_edges=True,show_scalar_bar=True)
             if master:
-                if not camera==None:
+                if camera is not None:
                     plt.camera_position=camera
                 plt.write_frame()
 
@@ -594,7 +589,7 @@ if _ts_dolfinx_exist:
                 plt.subplot(0,0)
                 plt.add_mesh(warped,show_edges=True,show_scalar_bar=True)
                 plt.add_title("iter {}: {}".format(i,ra/nm),font_size=8)
-                if not camera==None:
+                if camera is not None:
                     plt.camera_position=camera
                 if patch:
                     plt.subplot(0,2)
@@ -625,7 +620,7 @@ if _ts_dolfinx_exist:
                     if master:
                         plt.add_mesh(warpedf,show_edges=True,show_scalar_bar=True)
                 if master:
-                    if not camera==None:
+                    if camera is not None:
                         plt.camera_position=camera
                     plt.write_frame()
 
@@ -674,7 +669,7 @@ if _ts_dolfinx_exist:
 
         # check coherance with mpc
         do_mpc=sj.needs_mpc
-        if do_mpc and mpc==None:
+        if do_mpc and mpc is None:
             raise RuntimeError("scale jump provided expect MPC creation and you provide no mpc !")
 
         # solution field at fine scale
@@ -761,8 +756,6 @@ if _ts_dolfinx_exist:
         # use max
         nm=max(nb,nr)
         epsr=nm*eps
-
-        master=(enriched_field.function_space.mesh.comm.rank==0)
 
         # enter the loop
         i=0
@@ -861,8 +854,6 @@ if _ts_dolfinx_exist:
         # use max
         nm=max(nb,nr)
         epsr=nm*eps
-
-        master=(enriched_field.function_space.mesh.comm.rank==0)
 
         # enter the loop
         i=0

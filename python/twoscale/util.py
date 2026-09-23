@@ -2,11 +2,10 @@
 #
 # SPDX-License-Identifier:    LGPL-3.0-or-later
 """util module that provides function/class used to simplify implementation."""
-from twoscale import ts_cpp as _cpp
-
+import importlib
 _ts_dolfinx_exist=False
 try:
-    import twoscale.ts_cpp.dolfinx as _ts
+    importlib.import_module("twoscale.ts_cpp.dolfinx")
     _ts_dolfinx_exist=True
 except ImportError:
     print ("Twoscale dolfinx implementation not available")
@@ -58,7 +57,7 @@ if _ts_dolfinx_exist:
         formb=fem.forms.form(b,dtype=PETSc.ScalarType) # compiler_option and jit not provided for now TODO
         formbd=fem.forms.form(b,dtype=PETSc.ScalarType) # compiler_option and jit not provided for now TODO
 
-        if MPC!=None:
+        if MPC is not None:
             # generate MPC matrix
             pattern = dolfinx_mpc.create_sparsity_pattern(forma, MPC)
             pattern.finalize()
@@ -344,18 +343,18 @@ if _ts_dolfinx_exist:
 #=================================================================
     def all_sub(space: fem.FunctionSpace,
                    dom: mesh.Mesh,
-                   subs,psid,l=0,k=0):
+                   subs,psid,L=0,k=0):
         if space.mesh==dom:
             if (space.num_sub_spaces>1):
-                if l>0:
+                if L>0:
                     for i in range(space.num_sub_spaces):
-                        all_sub(space.sub(i),dom,subs,psid,l+1,k)
+                        all_sub(space.sub(i),dom,subs,psid,L+1,k)
                 else:
                     for i in range(space.num_sub_spaces):
-                        all_sub(space.sub(i),dom,subs,psid,l+1,i)
+                        all_sub(space.sub(i),dom,subs,psid,L+1,i)
             else:
                 subs.append(space)
-                if l>1:
+                if L>1:
                     psid.append(k)
                 else:
                     psid.append(0)
@@ -617,7 +616,7 @@ if _ts_dolfinx_exist:
         return x/n,n
 #=================================================================
     def distanceFromSphere(p:npt.ArrayLike,
-                  O:npt.ArrayLike,
+                  Orig:npt.ArrayLike,
                   r:float
                   ):
         """
@@ -625,7 +624,7 @@ if _ts_dolfinx_exist:
         Give the distance of set of point p to the sphere defined by its center and radius
 
         :param p: The points to test (shape 3xnb points)
-        :param O: The given center
+        :param Orig: The given center
         :param r: The radius
         :return: Distance of p to the sphere
 
@@ -635,7 +634,7 @@ if _ts_dolfinx_exist:
         nbp=(pt.shape)[0]
         assert((pt.shape)[1]==3)
         # origin,point p vector
-        d=pt-np.asarray(O,)
+        d=pt-np.asarray(Orig,)
         # point p distance to sphere surface if not inside it
         nd=np.linalg.norm(d,axis=1)
         duc=np.zeros(nbp)
@@ -643,7 +642,7 @@ if _ts_dolfinx_exist:
         return duc
 #=================================================================
     def distanceFromParallelogram(p:npt.ArrayLike,
-                                  O:npt.ArrayLike,
+                                  Orig:npt.ArrayLike,
                                   u:npt.ArrayLike,
                                   v:npt.ArrayLike):
         """
@@ -651,7 +650,7 @@ if _ts_dolfinx_exist:
         Give the distance of a point p to the parallelogram defined by a corner and 2 vectors describing each non colinear edges
 
         :param p: The points to test (shape 3xnb points)
-        :param O: The given corner
+        :param Orig: The given corner
         :param u: The vector describing one pair of edges
         :param v: The vector describing the second pair of edges
         :return: Distance of p to the parallelogram
@@ -669,7 +668,7 @@ if _ts_dolfinx_exist:
         #normal to plane
         [w,nw]=normalizev(np.cross(u,v))
         # origin,point p vector
-        d=pt-np.asarray(O,)
+        d=pt-np.asarray(Orig,)
         # point p coordinate in plane
         uc=np.dot(d,u)
         vc=np.dot(d,v)
@@ -709,16 +708,16 @@ if _ts_dolfinx_exist:
         assert((pt.shape)[1]==3)
         
         # origin
-        O=np.asarray(p0)
+        Orig=np.asarray(p0)
         #plane bases
-        [u,nu]=normalizev(np.asarray(p1)-O)
-        [v,nv]=normalizev(np.asarray(p2)-O)
+        [u,nu]=normalizev(np.asarray(p1)-Orig)
+        [v,nv]=normalizev(np.asarray(p2)-Orig)
         nu2=nu*nu
         nv2=nv*nv
         #normal to plane
         [w,nw]=normalizev(np.cross(u,v))
         # origin,point p vector
-        d=pt-O
+        d=pt-Orig
         # point p coordinate in plane
         uc=np.dot(d,u)
         vc=np.dot(d,v)
@@ -733,7 +732,7 @@ if _ts_dolfinx_exist:
         return np.sqrt(deq*deq+wc*wc)
 #=================================================================
     def insideParallelepiped(p:npt.ArrayLike,
-                  O:npt.ArrayLike,
+                  Orig:npt.ArrayLike,
                   u:npt.ArrayLike,
                   v:npt.ArrayLike,
                   w:npt.ArrayLike,
@@ -743,7 +742,7 @@ if _ts_dolfinx_exist:
         Mark as True the points of a given set that are inside a parallelepiped defined by a corner and 3 vectors describing each non colinear edges
 
         :param p: The points to test (shape 3xnb points)
-        :param O: The given corner
+        :param Orig: The given corner
         :param u: The vector describing one edges direction and size
         :param v: The vector describing the second edges direction and size
         :param w: The vector describing the third edges direction and size
@@ -758,7 +757,7 @@ if _ts_dolfinx_exist:
         pt=np.transpose(np.asarray(p))
         assert((pt.shape)[1]==3)
         # origin,point p vector
-        d=pt-np.asarray(O,)
+        d=pt-np.asarray(Orig,)
         # point p coordinate in box
         uc=np.dot(d,u)
         vc=np.dot(d,v)
@@ -766,7 +765,7 @@ if _ts_dolfinx_exist:
         return np.logical_and(np.logical_and(uc>=0,uc<=nu),np.logical_and(np.logical_and(vc>=0,vc<=nv),np.logical_and(wc>=0,wc<=nw)))
 #=================================================================
     def insideSphere(p:npt.ArrayLike,
-                  O:npt.ArrayLike,
+                  Orig:npt.ArrayLike,
                   r:float
                   ):
         """
@@ -774,7 +773,7 @@ if _ts_dolfinx_exist:
         Mark as True the points of a given set that are inside a sphere defined by its center and radius
 
         :param p: The points to test (shape 3xnb points)
-        :param O: The given center
+        :param Orig: The given center
         :param r: The radius
         :return: array indicating if test points are in (True) our out (False) of the sphere
 
@@ -783,11 +782,11 @@ if _ts_dolfinx_exist:
         pt=np.transpose(np.asarray(p))
         assert((pt.shape)[1]==3)
         # origin,point p vector
-        d=pt-np.asarray(O,)
+        d=pt-np.asarray(Orig,)
         return np.linalg.norm(d,axis=1)<r
 #=================================================================
     def insideCylinder( p:npt.ArrayLike,
-                        O:npt.ArrayLike,
+                        Orig:npt.ArrayLike,
                         axes:npt.ArrayLike,
                         r:float
                   ):
@@ -796,7 +795,7 @@ if _ts_dolfinx_exist:
         Mark as True the points of a given set that are inside a cylinder defined by an axis (that give also its lenght), a origine on that axis and a radius.
 
         :param p: The points to test (shape 3xnb points)
-        :param O: The given cylindrical bases
+        :param Orig: The given cylindrical bases
         :param axes: The vector describing cylinder axes and its length
         :param r: The radius of the cylinder
         :return: array indicating if test points are in (True) or out (False) of the cylinder
@@ -805,10 +804,9 @@ if _ts_dolfinx_exist:
         [a,na]=normalizev(axes)
         # points to test
         pt=np.transpose(np.asarray(p))
-        nbp=(pt.shape)[0]
         assert((pt.shape)[1]==3)
         # origin,point p vector
-        d=pt-np.asarray(O,)
+        d=pt-np.asarray(Orig,)
         # coordinate along axes
         ac=np.dot(d,a)
         # radial coordinate 
@@ -836,20 +834,19 @@ if _ts_dolfinx_exist:
 
         # points to test
         pt=np.transpose(np.asarray(p))
-        nbp=(pt.shape)[0]
         assert((pt.shape)[1]==3)
         
         # origin
-        O=np.asarray(p0)
+        Orig=np.asarray(p0)
         #plane bases
-        [u,nu]=normalizev(np.asarray(p1)-O)
-        [v,nv]=normalizev(np.asarray(p2)-O)
+        [u,nu]=normalizev(np.asarray(p1)-Orig)
+        [v,nv]=normalizev(np.asarray(p2)-Orig)
         nu2=nu*nu
         nv2=nv*nv
         #normal to plane
         [w,nw]=normalizev(np.cross(u,v))
         # origin,point p vector
-        d=pt-O
+        d=pt-Orig
         # point p coordinate in plane
         uc=np.dot(d,u)
         vc=np.dot(d,v)

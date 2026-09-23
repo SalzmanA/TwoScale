@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier:    LGPL-3.0-or-later
 """core module that provides function to create/interogate two scale object."""
-from twoscale import ts_cpp as _cpp
-
 _ts_dolfinx_exist=False
 try:
     import twoscale.ts_cpp.dolfinx as _ts
@@ -21,15 +19,11 @@ if _ts_dolfinx_exist:
     from dolfinx.mesh import MeshTags
 #tmp ??
     from dolfinx import default_real_type
-    from dolfinx.cpp.mesh import (CellType)
     from dolfinx_mpc.multipointconstraint import MultiPointConstraint
     import basix
     import basix.ufl
     import ufl
     from petsc4py import PETSc
-    #tmp ?
-    import numpy as np
-    import numpy.typing as npt
     import typing
 
 #=================================================================
@@ -258,7 +252,7 @@ if _ts_dolfinx_exist:
             """
             Compute the enriched part of the scale jump operator based on patches solution and the enrichment function generator
             """
-            self._coarse_manager.updateEnrichedOperator(pm._patch_manager,func._enriched_function);
+            self._coarse_manager.updateEnrichedOperator(pm._patch_manager,func._enriched_function)
         def updateEnrichCoarse(self,
                          Aff:PETSc.Mat,
                          bf:PETSc.Vec):
