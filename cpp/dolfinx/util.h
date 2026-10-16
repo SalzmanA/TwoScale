@@ -9,6 +9,7 @@
 
 #include <unordered_map>
 #include <mpi.h>
+#include <iostream>
 #include <basix/mdspan.hpp>
 #ifdef HAS_PETSC
 #include <petscsystypes.h>
