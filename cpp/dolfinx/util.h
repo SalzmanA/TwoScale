@@ -31,39 +31,47 @@
    }
 #ifdef HAS_PETSC
 #if PETSC_VERSION_GE(3, 25, 0)
-#define CHECK(ierr, msg, comm)                                                         \
-   if (ierr)                                                                           \
-   {                                                                                   \
-      const char *desc;                                                                \
-      const char *extr;                                                                \
-      PetscErrorMessage(ierr, &desc, &extr);                                           \
-      std::cout << msg << ": " << desc << " (" << ierr << ") / " << extr << std::endl; \
-      MPI_Abort(comm, -ierr);                                                          \
+#define CHECK(ierr, from, msg, comm)                                                                  \
+   if (ierr)                                                                                          \
+   {                                                                                                  \
+      const char *desc;                                                                               \
+      const char *extr;                                                                               \
+      PetscErrorMessage(ierr, &desc, &extr);                                                          \
+      std::cout << from << " " << msg << ": " << desc << " (" << ierr << ") / " << extr << std::endl; \
+      MPI_Abort(comm, -ierr);                                                                         \
    }
 #else
-#define CHECK(ierr, msg, comm)                                                         \
-   if (ierr)                                                                           \
-   {                                                                                   \
-      const char *desc;                                                                \
-      char *extr;                                                                      \
-      PetscErrorMessage(ierr, &desc, &extr);                                           \
-      std::cout << msg << ": " << desc << " (" << ierr << ") / " << extr << std::endl; \
-      MPI_Abort(comm, -ierr);                                                          \
+#define CHECK(ierr, from, msg, comm)                                                                  \
+   if (ierr)                                                                                          \
+   {                                                                                                  \
+      const char *desc;                                                                               \
+      char *extr;                                                                                     \
+      PetscErrorMessage(ierr, &desc, &extr);                                                          \
+      std::cout << from << " " << msg << ": " << desc << " (" << ierr << ") / " << extr << std::endl; \
+      MPI_Abort(comm, -ierr);                                                                         \
    }
 #endif
 #else
-#define CHECK(ierr, msg, comm)                                                         \
-   if (ierr)                                                                           \
-   {                                                                                   \
-      std::cout << msg << ": " <<  ierr << std::endl;                                  \
-      MPI_Abort(comm, -ierr);                                                          \
+#define CHECK(ierr, from, msg, comm)                                \
+   if (ierr)                                                        \
+   {                                                                \
+      std::cout << from << " " << msg << ": " << ierr << std::endl; \
+      MPI_Abort(comm, -ierr);                                       \
    }
 #endif
-#define DO(cmd, msg, comm)       \
+#define DO1(cmd, msg, comm)      \
    {                             \
       PetscErrorCode ierr = cmd; \
-      CHECK(ierr, msg, comm)     \
+      CHECK(ierr, "", msg, comm) \
    }
+#define DO2(cmd, from, msg, comm)  \
+   {                               \
+      PetscErrorCode ierr = cmd;   \
+      CHECK(ierr, from, msg, comm) \
+   }
+
+#define DO_SELECT(_1, _2, _3, _4, NAME, ...) NAME
+#define DO(...) DO_SELECT(__VA_ARGS__, DO2, DO1)(__VA_ARGS__)
 
 namespace twoscale
 {
@@ -78,14 +86,24 @@ void sendVectMPI3(
       MPI_Issend((void *)send.second.data(), send.second.size(), TMPI, send.first, tag, univ, &request_to[nb_send++]);
    assert(nb_send == nb_send_message);
 
-   // somme work during comunication: 
+   bool do_test = false;
+   MPI_Request barrier_request(MPI_REQUEST_NULL);
+   // If no data are send from this process it must immediately enters the barrier.
+   // When all process of the communicator will have enter the barrier we will know that all message sent have been received
+   // by all target process.
+   if (nb_send_message < 1)
+   {
+      MPI_Ibarrier(univ, &barrier_request);
+      // skip barrier test as already entered into it.
+      do_test = true;
+   }
+
+   // Somme work during communication: 
    work();
 
    // loop to receive info and wait for all data been sent
-   bool do_test = false;
    int flag, from;
    MPI_Status status;
-   MPI_Request barrier_request(MPI_REQUEST_NULL);
    do
    {
       // probing pending message without blocking to be able to check barrier achievement (end of loop)
@@ -106,9 +124,9 @@ void sendVectMPI3(
          func(recv_buff, from);
       }
 
-      // Does all sended mesages are arrived ? we test ... we don't want to wait for that as we want to loop
+      // Does all send messages are arrived ? we test ... we don't want to wait for that as we want to loop
       // so it is a test i.e. non blocking
-      // We do this test only if we haven't already entered barrier
+      // We do this test only if we haven't already entered barrier 
       if (!do_test)
       {
          MPI_Testany(nb_send_message, &request_to[0], &from, &flag, MPI_STATUS_IGNORE);
