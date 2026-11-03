@@ -41,7 +41,9 @@ coarseManager<Mat, Vec>::coarseManager(Mat &&PSR_, Mat &&PEt_, Vec &&W_, std::ve
                                        std::unordered_map<std::int32_t, twoscale_dolfinx::enrichedDofIDs> &&enriched_dof_id_)
     : PSR(PSR_),
       PEt(PEt_),
+      Acc(nullptr),
       AffPSR(nullptr),
+      Acc_blocks{nullptr, nullptr, nullptr, nullptr},
       Acc_std(nullptr),
       W(W_),
       BMZ(nullptr),
@@ -127,7 +129,9 @@ coarseManager<Mat, Vec>::coarseManager(Mat &&PSR_, Mat &&PEt_, Vec &&W_, std::ve
 coarseManager<Mat, Vec>::coarseManager(coarseManager<Mat, Vec> &&other)
     : PSR(other.PSR),
       PEt(other.PEt),
+      Acc(other.Acc),
       AffPSR(other.AffPSR),
+      Acc_blocks{other.Acc_blocks[0], other.Acc_blocks[1], other.Acc_blocks[2], other.Acc_blocks[3]},
       Acc_std(other.Acc_std),
       W(other.W),
       BMZ(other.BMZ),
@@ -160,24 +164,25 @@ coarseManager<Mat, Vec>::~coarseManager()
    // if moved instance all members are now owned by another instance thus pointers should not be freed
    if (!moved)
    {
-      // Normally PS,PEt and Acc should'nt be null
+      // Normally PS and PEt should'nt be null
       assert(PSR != nullptr);
       assert(PEt != nullptr);
-      DO(MatDestroy(&PSR), "Problem to destroy PS", comm)
-      DO(MatDestroy(&PEt), "Problem to destroy PEt", comm)
-      if (AffPSR != nullptr) DO(MatDestroy(&AffPSR), "Problem to destroy AffPSR", comm)
-      // for vector depending on state they are allocated or not thus test is done
-      if (W != nullptr) DO(VecDestroy(&W), "Problem to destroy W", comm)
-      if (BMZ != nullptr) DO(VecDestroy(&BMZ), "Problem to destroy BMZ", comm)
-      if (bc != nullptr) DO(VecDestroy(&bc), "Problem to destroy bc", comm)
-      if (xc != nullptr) DO(VecDestroy(&xc), "Problem to destroy xc", comm)
-      if (solver != nullptr) DO(KSPDestroy(&solver), "Problem to destroy solver", comm)
-#ifdef TWOSCALE_PETSC_MATNEST
-      if (solver_std_only != nullptr) DO(KSPDestroy(&solver_std_only), "Problem to destroy solver_std_only", comm)
-      if (Acc_std != nullptr) DO(MatDestroy(&Acc_std), "Problem to destroy Acc_std", comm)
-      if (S != nullptr) DO(VecDestroy(&S), "Problem to destroy S", comm)
-      if (bc_contrib != nullptr) DO(VecDestroy(&bc_contrib), "Problem to destroy bc_contrib", comm)
-#endif
+      // order is important in debug mode as there is dependency
+      DESTROYPETSC(KSP,solver,comm)
+      DESTROYPETSC(Mat,Acc,comm)
+      for (int i=0;i<4;++i)
+            DESTROYPETSC(Mat,Acc_blocks[i],comm)
+      DESTROYPETSC(Mat,AffPSR,comm)
+      DESTROYPETSC(Mat,PSR,comm)
+      DESTROYPETSC(Mat,PEt,comm)
+      DESTROYPETSC(Vec,W,comm)
+      DESTROYPETSC(Vec,BMZ,comm)
+      DESTROYPETSC(Vec,bc,comm)
+      DESTROYPETSC(Vec,xc,comm)
+      DESTROYPETSC(KSP,solver_std_only,comm)
+      DESTROYPETSC(Mat,Acc_std,comm)
+      DESTROYPETSC(Vec,S,comm)
+      DESTROYPETSC(Vec,bc_contrib,comm)
    }
 }
 #else

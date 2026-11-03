@@ -295,11 +295,13 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
       PetscReal norm_inf;
       DO(VecNorm(XDc, NORM_INFINITY, &norm_inf), "problem while computing XDc_ norm", comm)
       // generate W if norm not null
+      //TODO: epsilon or min ?
+      //std::println("XDc norm_inf={}",norm_inf);
       if (norm_inf > std::numeric_limits<PetscReal>::epsilon()) W = dolfinx::la::petsc::create_vector(*idxmapf, bs_f);
       // otherwise remove XDc which is not needed anymore
       else
       {
-         DO(VecDestroy(&XDc), "Problem to destroy XDc", comm)
+         DESTROYPETSC(Vec,XDc,comm)
       }
    }
 
@@ -956,10 +958,11 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
       DO(MatMult(PSD, XDc, W), "Problem while computing W", comm)
       // std::println("W");
       // VecView(W, PETSC_VIEWER_STDOUT_(comm));
-      // PSD,XDc not needed any more: clean memory
-      DO(MatDestroy(&PSD), "Problem to destroy LS", comm)
-      DO(VecDestroy(&XDc), "Problem to destroy XDc", comm)
+      // XDc not needed any more: clean memory
+      DESTROYPETSC(Vec, XDc, comm)
    }
+   // PSD not needed any more: clean memory
+   DESTROYPETSC(Mat,PSD,comm)
 
    // ============
    // transpose PE

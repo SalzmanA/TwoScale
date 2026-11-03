@@ -59,10 +59,13 @@
       MPI_Abort(comm, -ierr);                                       \
    }
 #endif
+#define TS_STR_IMPL(x) #x
+#define TS_STR(x) TS_STR_IMPL(x)
+#define TS_LOCATION __FILE__ ":" TS_STR(__LINE__)
 #define DO1(cmd, msg, comm)      \
    {                             \
       PetscErrorCode ierr = cmd; \
-      CHECK(ierr, "", msg, comm) \
+      CHECK(ierr, TS_LOCATION, msg, comm) \
    }
 #define DO2(cmd, from, msg, comm)  \
    {                               \
@@ -73,6 +76,36 @@
 #define DO_SELECT(_1, _2, _3, _4, NAME, ...) NAME
 #define DO(...) DO_SELECT(__VA_ARGS__, DO2, DO1)(__VA_ARGS__)
 
+#ifdef NDEBUG
+#define DESTROYPETSC(type, obj, com)                                                                           \
+   {                                                                                                           \
+      if (obj != nullptr)                                                                                      \
+      {                                                                                                        \
+         DO(type##Destroy(&obj), "Problem to destroy " #obj, comm)                                             \
+      }                                                                                                        \
+   }
+#else
+#define DESTROYPETSC(type, obj, com)                                                                                         \
+   {                                                                                                                         \
+      std::cout << #type "Destroy object " #obj;                                                                             \
+      if (obj != nullptr)                                                                                                    \
+      {                                                                                                                      \
+         PetscInt nref;                                                                                                      \
+         PetscObjectGetReference((PetscObject)obj, &nref);                                                                   \
+         if (nref > 1)                                                                                                       \
+         {                                                                                                                   \
+            std::cout << " with nref: " << nref << " will not free memory but only decrements reference count" << std::endl; \
+            std::cout << "Asked in " << __FILE__ << " " << __LINE__ << std::endl;                                            \
+            std::cout << "Check that other references get also destroyed to avoid potential memory leak" << std::endl;       \
+         }                                                                                                                   \
+         else                                                                                                                \
+            std::cout << " release memory" << std::endl;                                                                     \
+         DO(type##Destroy(&obj), "Problem to destroy " #obj, comm)                                                           \
+      }                                                                                                                      \
+      else                                                                                                                   \
+         std::cout << " which is null (nothing done)" << std::endl;                                                          \
+   }
+#endif
 namespace twoscale
 {
 template <typename T, typename F, typename W>
