@@ -20,5 +20,5 @@ dependencies = [
 ]
 
 [tool.scikit-build]
-cmake.build-type = "Release"
+cmake.build-type = "@TWOSCALE_BUILD_TYPE@"
 wheel.packages = ["twoscale"]

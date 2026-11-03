@@ -4,8 +4,9 @@ cmake_minimum_required(VERSION 3.21)
 project(Twoscale VERSION "0.11.1")
 
 # ===============================================================================================
-# pyproject.toml generation from VERSION above
+# pyproject.toml generation from VERSION above and invoked BUILD_TYPE
 math( EXPR DOLFINX_NEXT_MINOR "${PROJECT_VERSION_MINOR}+1" )
+set(TWOSCALE_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/../python/pyproject.toml.in"
     "${CMAKE_CURRENT_SOURCE_DIR}/../python/pyproject.toml"
