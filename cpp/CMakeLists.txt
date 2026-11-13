@@ -52,6 +52,7 @@ endif()
 # ===============================================================================================
 # packaging
 include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
 write_basic_package_version_file(
   ${CMAKE_BINARY_DIR}/TwoscaleConfigVersion.cmake
   VERSION ${Twoscale_VERSION}
