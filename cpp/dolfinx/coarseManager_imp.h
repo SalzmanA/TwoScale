@@ -343,6 +343,7 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
 
    // reference coordinates
    std::array<U, 3> X_child_b;
+   std::span<U> X_child_s(X_child_b.data(), dim);
    mdspan_t<U, 2> X_child(X_child_b.data(), 1, dim);
 
    // Geometry data at each point
@@ -361,6 +362,13 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
    cellc_cmap.tabulate(1, std::vector<U>(dim), point_shape, phi_coarse_b);  // get for first node FF and derivative
    auto dphi_coarse = MDSPAN_IMPL_STANDARD_NAMESPACE::submdspan(
        phi_coarse, std::pair(1, dim + 1), 0, MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent, 0);  // only derivative
+   // cell interpolation function for one point: use same memory,just span first terms
+   // use of tabulate_shape is a little overkill as we know here we use only order 1 simplex: dim+1 would have gently give span
+   // dimension
+   // But in future ?
+   const std::array<std::size_t, 4> phi_coarse_shape_only = cellc_cmap.tabulate_shape(0, 1);
+   std::span<U> phi_coarse_s(phi_coarse_b.data(),
+                             std::reduce(phi_coarse_shape_only.begin(), phi_coarse_shape_only.end(), 1, std::multiplies{}));
 
    // ========================================
    // Full or partial enrichment specific data
@@ -610,14 +618,14 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
             // PRINT("X_child", X_child);
 
             // get interpolation function values at reference location: coefficients of the mpc for this slave nodes
-            cellc_cmap.tabulate(0, X_child_b, point_shape, phi_coarse_b);
+            cellc_cmap.tabulate(0, X_child_s, point_shape, phi_coarse_s);
             // PRINT("phi_coarse_b", phi_coarse_b);
 
             // loop on FF
             std::int8_t k = -1;
             if (enriched)
             {
-               for (auto &val : phi_coarse_b | std::views::take(phi_coarse_shape[0]))
+               for (auto &val : phi_coarse_s)
                {
                   ++k;
 
@@ -644,7 +652,7 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
             }
             else
             {
-               for (auto &val : phi_coarse_b | std::views::take(phi_coarse_shape[0]))
+               for (auto &val : phi_coarse_s)
                {
                   ++k;
 
@@ -905,12 +913,13 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
             // PRINT("X_child", X_child);
 
             // get interpolation function values at reference location: coefficients of the mpc for this slave nodes
-            cellc_cmap.tabulate(0, X_child_b, point_shape, phi_coarse_b);
+            cellc_cmap.tabulate(0, X_child_s, point_shape, phi_coarse_s);
             // PRINT("phi_coarse_b", phi_coarse_b);
 
             // loop on FF
             std::int8_t k = -1;
-            for (auto &val : phi_coarse_b | std::views::take(phi_coarse_shape[0]))
+
+            for (auto &val : phi_coarse_s)
             {
                ++k;
 
@@ -1326,6 +1335,7 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
 
    // reference coordinates
    std::array<U, 3> X_child_b;
+   std::span<U> X_child_s(X_child_b.data(), dim);
    mdspan_t<U, 2> X_child(X_child_b.data(), 1, dim);
 
    // Geometry data at each point
@@ -1345,6 +1355,13 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
    cellc_cmap.tabulate(1, std::vector<U>(dim), point_shape, phi_coarse_b);  // get for first node FF and derivative
    auto dphi_coarse = MDSPAN_IMPL_STANDARD_NAMESPACE::submdspan(
        phi_coarse, std::pair(1, dim + 1), 0, MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent, 0);  // only derivative
+   // cell interpolation function for one point: use same memory,just span first terms
+   // use of tabulate_shape is a little overkill as we know here we use only order 1 simplex: dim+1 would have gently give span
+   // dimension
+   // But in future ?
+   const std::array<std::size_t, 4> phi_coarse_shape_only = cellc_cmap.tabulate_shape(0, 1);
+   std::span<U> phi_coarse_s(phi_coarse_b.data(),
+                             std::reduce(phi_coarse_shape_only.begin(), phi_coarse_shape_only.end(), 1, std::multiplies{}));
 
    // =============================================
    // loop on all cell to identify OP and Acc graph
@@ -1619,13 +1636,14 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
                dolfinx::fem::CoordinateElement<U>::pull_back_affine(X_child, K, x0, x_child);
                // PRINT("X_child", X_child);
 
+
                // get interpolation function values at reference location: coefficients of the mpc for this slave nodes
-               cellc_cmap.tabulate(0, X_child_b, point_shape, phi_coarse_b);
+               cellc_cmap.tabulate(0, X_child_s, point_shape, phi_coarse_s);
                // PRINT("phi_coarse_b", phi_coarse_b);
 
                // loop on FF
                std::int8_t k = -1;
-               for (auto &val : phi_coarse_b | std::views::take(phi_coarse_shape[0]))
+               for (auto &val : phi_coarse_s)
                {
                   ++k;
 
@@ -1867,12 +1885,12 @@ twoscale::coarseManager<Mat, Vec> generateCoarseManager(const twoscale::scaleJum
                // PRINT("X_child", X_child);
 
                // get interpolation function values at reference location: coefficients of the mpc for this slave nodes
-               cellc_cmap.tabulate(0, X_child_b, point_shape, phi_coarse_b);
+               cellc_cmap.tabulate(0, X_child_s, point_shape, phi_coarse_s);
                // PRINT("phi_coarse_b", phi_coarse_b);
 
                // loop on FF
                std::int8_t k = -1;
-               for (auto &val : phi_coarse_b | std::views::take(phi_coarse_shape[0]))
+               for (auto &val : phi_coarse_s)
                {
                   ++k;
 

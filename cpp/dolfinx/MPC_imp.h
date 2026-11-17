@@ -180,10 +180,19 @@ dolfinx_mpc::mpc_data<T> generateMPC(const twoscale::scaleJump<dolfinx::mesh::Me
    //PRINT("phi_master",phi_master);
    auto dphi_master = MDSPAN_IMPL_STANDARD_NAMESPACE::submdspan(
        phi_master, std::pair(1, dim + 1), 0, MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent, 0);  // only derivative
-   //PRINT("phi_master_b", phi_master_b);
+   // PRINT("phi_master_b", phi_master_b);
+   //
+   // cell interpolation function for one point: use same memory,just span first terms
+   // use of tabulate_shape is a little overkill as we know here we use only order 1 simplex: dim+1 would have gently give span
+   // dimension
+   // But in future ?
+   const std::array<std::size_t, 4> phi_master_shape_only = cellc_cmap.tabulate_shape(0, 1);
+   std::span<U> phi_master_s(phi_master_b.data(),
+                             std::reduce(phi_master_shape_only.begin(), phi_master_shape_only.end(), 1, std::multiplies{}));
 
    // reference coodinates
    std::array<U,3> X_child_b;
+   std::span<U> X_child_s(X_child_b.data(), dim);
    mdspan_t<U, 2> X_child(X_child_b.data(), 1, dim);
 
    // epsilon in U arithmetic : use this limit is ok as normally
@@ -345,11 +354,11 @@ dolfinx_mpc::mpc_data<T> generateMPC(const twoscale::scaleJump<dolfinx::mesh::Me
          //PRINT("X_child", X_child);
 
          // get interpolation function values at reference location: coefficients of the mpc for this master nodes 
-         cellc_cmap.tabulate(0, X_child_b, point_shape, phi_master_b);
+         cellc_cmap.tabulate(0, X_child_s, point_shape, phi_master_s);
          //PRINT("phi_master_b",phi_master_b);
 
          k = -1;
-         for (auto &val : phi_master_b | std::views::take(phi_master_shape[0]))
+         for (auto &val : phi_master_s)
          {
             ++k;
             if (val > onemeps)
@@ -415,14 +424,14 @@ dolfinx_mpc::mpc_data<T> generateMPC(const twoscale::scaleJump<dolfinx::mesh::Me
          //PRINT("X_child", X_child);
 
          // get interpolation function values at reference location: coefficients of the mpc for this slave nodes 
-         cellc_cmap.tabulate(0, X_child_b, point_shape, phi_master_b);
+         cellc_cmap.tabulate(0, X_child_s, point_shape, phi_master_s);
          //PRINT("phi_master_b",phi_master_b);
 
          // search mpc coef from FF values:
          //     * remove almost numerical 0. Here coefficient are in between 0 and 1 thus an absolute eps is ok
          //     * almost 1  not supposed to exist: error
          std::int8_t k = -1;
-         for (auto &val : phi_master_b | std::views::take(phi_master_shape[0]))
+         for (auto &val : phi_master_s)
          {
             ++k;
             if (val > eps)
