@@ -64,20 +64,21 @@ endif()
 get_target_property(tsdef ts_cpp COMPILE_DEFINITIONS)
 message(STATUS "Inherited definition ${tsdef}")
 
-# Check for dolfinx python api
-execute_process(
-   COMMAND ${Python_EXECUTABLE} -c
-          "import dolfinx; print(dolfinx.get_include())"
-   OUTPUT_VARIABLE SDOLFINX_INCLUDE_DIR
-   RESULT_VARIABLE SDOLFINX_COMMAND_RESULT
-   ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-if(NOT SDOLFINX_COMMAND_RESULT)
-  message(STATUS "Found dolfinx include directory at ${SDOLFINX_INCLUDE_DIR}")
-  target_include_directories(ts_cpp PRIVATE ${SDOLFINX_INCLUDE_DIR})
+# Check for dolfinx python include-dirs
+option(DOLFINX_PY_DIR "Include directory for dolfinx python wrappers; skips auto-detection when it does not work." "")
+if (NOT DOLFINX_PY_DIR)
+   execute_process(
+      COMMAND ${Python3_EXECUTABLE} -c "import dolfinx; print(dolfinx.get_include())"
+      OUTPUT_VARIABLE DOLFINX_PY_DIR
+      RESULT_VARIABLE SDOLFINX_COMMAND_RESULT
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      COMMAND_ERROR_IS_FATAL ANY
+   )
+endif()
+if(DOLFINX_PY_DIR)
+  message(STATUS "Found dolfinx include directory at ${DOLFINX_PY_DIR}")
+  target_include_directories(ts_cpp PRIVATE ${DOLFINX_PY_DIR})
   target_compile_definitions(ts_cpp PRIVATE HAS_DOLFINX_PY)
-else()
-  message(STATUS "dolfinx not found.")
 endif()
 
 # Check for petsc4py
