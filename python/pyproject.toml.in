@@ -17,6 +17,9 @@ authors = [
 readme = "README.md"
 dependencies = [
     "fenics-dolfinx>=@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@,<@PROJECT_VERSION_MAJOR@.@DOLFINX_NEXT_MINOR@",
+    "petsc4py",
+    "numpy",
+    "pyvista",
 ]
 
 [tool.scikit-build]
