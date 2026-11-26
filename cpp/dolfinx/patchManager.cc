@@ -61,7 +61,7 @@ patch::patch(std::int32_t enriched_id_, std::int64_t id_, std::uint16_t state_, 
       Diri_dofs_to_exchange(std::move(Diri_dofs_to_exchange_)),
       remotes(std::move(remotes_)),
       id(id_),
-      weight(dofs_.size()),
+      weight(dofs.size()),
       enriched_id(enriched_id_),
       owner(owner_),
       state(state_),
@@ -81,7 +81,75 @@ void patch::printID() const { cout << " " << id << endl; }
 std::int64_t patch::getID() const { return id; }
 std::int32_t patch::getSID() const { return enriched_id; }
 std::span<const int> patch::getRemote() const { return std::span<const int>(remotes); }
-void patch::initPatchForComm(MPI_Comm comm,MPI_Comm univ)
+void patch::print() const
+{
+   cout<<"Patch "<<id<<" ("<<enriched_id<<") ";
+   if (state & LOCAL)
+      cout << "local ";
+   else
+      cout << "distributed ";
+   cout << "patch ";
+   if (state & GLOBAL_WEIGHT)
+      cout << "Global ";
+   else
+      cout << "Local ";
+   cout << "weight:" << weight ;
+   if (state & DIST)
+   {
+      cout << " owner: " << owner ;
+      cout << " remote:";
+      for (auto r : remotes) cout << " " << r;
+   }
+   cout << endl;
+}
+bool patch::isDist() const { return (state & DIST); }
+float patch::getWeight() const { return weight; }
+patchMPIDirect::patchMPIDirect(std::int32_t enriched_id_, std::int64_t id_, std::uint16_t state_, std::vector<PetscInt> &&dofs_,
+                               std::vector<PetscInt> &&dofs_to_exchange_, std::vector<PetscInt> &&Diri_dofs_,
+                               std::vector<PetscInt> &&Diri_dofs_to_exchange_, int owner_, std::vector<int> &&remotes_)
+    : patch(enriched_id_, id_, state_, std::forward<std::vector<PetscInt>>(dofs_),
+            std::forward<std::vector<PetscInt>>(dofs_to_exchange_), std::forward<std::vector<PetscInt>>(Diri_dofs_),
+            std::forward<std::vector<PetscInt>>(Diri_dofs_to_exchange_), owner_, std::forward<std::vector<int>>(remotes_)),
+      idxqf(nullptr),
+      idxdf(nullptr),
+      Aqq(nullptr),
+      Aqd(nullptr),
+      bq0(nullptr),
+      bq(nullptr),
+      xd(nullptr),
+      xdloc(nullptr),
+      xq(nullptr),
+      computef(nullptr),
+      enrich(nullptr),
+      solver(nullptr),
+      idr(-1),
+      idx_dof_f_enriched(-1),
+      scatter2e(nullptr),
+      univ(MPI_COMM_NULL)
+{
+}
+patchMPIDirect::~patchMPIDirect()
+{
+   if (idxqf != nullptr) std::cout << "in ~patchMPIDirect with non cleared data" << std::endl;
+}
+void patchMPIDirect::setUniv(const MPI_Comm &univ_) { univ = univ_; }
+void patchMPIDirect::clear(MPI_Comm comm)
+{
+   DESTROYPETSC(KSP,solver,comm)
+   DESTROYPETSC(Mat,Aqq,comm)
+   DESTROYPETSC(Mat,Aqd,comm)
+   DESTROYPETSC(Vec,bq0,comm)
+   DESTROYPETSC(Vec,bq,comm)
+   DESTROYPETSC(Vec,xd,comm)
+   DESTROYPETSC(Vec,xdloc,comm)
+   DESTROYPETSC(Vec,xq,comm)
+   computef = nullptr;
+   DESTROYPETSC(Vec,enrich,comm)
+   DESTROYPETSC(IS,idxqf,comm)
+   DESTROYPETSC(IS,idxdf,comm)
+   DESTROYPETSC(VecScatter,scatter2e,comm)
+}
+void patchMPIDirect::initPatchForComm(MPI_Comm comm)
 {
    // set rank and size
    MPI_Comm_rank(univ, &pidp);
@@ -179,122 +247,8 @@ void patch::initPatchForComm(MPI_Comm comm,MPI_Comm univ)
    // change state
    state |= INIT;
 }
-void patch::print() const
-{
-   cout<<"Patch "<<id<<" ("<<enriched_id<<") ";
-   if (state & LOCAL)
-      cout << "local ";
-   else
-      cout << "distributed ";
-   cout << "patch ";
-   if (state & GLOBAL_WEIGHT)
-      cout << "Global ";
-   else
-      cout << "Local ";
-   cout << "weight:" << weight ;
-   if (state & DIST)
-   {
-      cout << " owner: " << owner ;
-      cout << " remote:";
-      for (auto r : remotes) cout << " " << r;
-   }
-   cout << endl;
-}
-bool patch::isDist() const { return (state & DIST); }
-float patch::getWeight() const { return weight; }
-patchMPIDirect::patchMPIDirect(std::int32_t enriched_id_, std::int64_t id_, std::uint16_t state_, std::vector<PetscInt> &&dofs_,
-                               std::vector<PetscInt> &&dofs_to_exchange_, std::vector<PetscInt> &&Diri_dofs_,
-                               std::vector<PetscInt> &&Diri_dofs_to_exchange_, int owner_, std::vector<int> &&remotes_)
-    : patch(enriched_id_, id_, state_, std::forward<std::vector<PetscInt>>(dofs_),
-            std::forward<std::vector<PetscInt>>(dofs_to_exchange_), std::forward<std::vector<PetscInt>>(Diri_dofs_),
-            std::forward<std::vector<PetscInt>>(Diri_dofs_to_exchange_), owner_, std::forward<std::vector<int>>(remotes_)),
-      idxqf(nullptr),
-      idxdf(nullptr),
-      Aqq(nullptr),
-      Aqd(nullptr),
-      bq0(nullptr),
-      bq(nullptr),
-      xd(nullptr),
-      xdloc(nullptr),
-      xq(nullptr),
-      computef(nullptr),
-      enrich(nullptr),
-      solver(nullptr),
-      idr(-1),
-      idx_dof_f_enriched(-1),
-      scatter2e(nullptr)
-{
-}
-patchMPIDirect::~patchMPIDirect()
-{
-   if (idxqf != nullptr) std::cout << "in ~patchMPIDirect with non cleared data" << std::endl;
-}
-void patchMPIDirect::clear(MPI_Comm comm, MPI_Comm univ)
-{
-   if (idxqf != nullptr)
-   {
-      DO(ISDestroy(&idxqf), "problem while deleting q idx", comm)
-      idxqf=nullptr;
-   }
-   if (idxdf != nullptr)
-   {
-      DO(ISDestroy(&idxdf), "problem while deleting d idx", comm)
-      idxdf=nullptr;
-   }
-   if (Aqq != nullptr)
-   {
-      DO(MatDestroy(&Aqq), "Problem to destroy Aqq ", comm)
-      Aqq=nullptr;
-   }
-   if (Aqd != nullptr)
-   {
-      DO(MatDestroy(&Aqd), "Problem to destroy Aqd ", comm)
-      Aqd=nullptr;
-   }
-   if (bq0 != nullptr)
-   {
-      DO(VecDestroy(&bq0), "Problem to destroy bq0", comm)
-      bq0 = nullptr;
-   }
-   if (bq != nullptr)
-   {
-      DO(VecDestroy(&bq), "Problem to destroy bq", comm)
-      bq = nullptr;
-   }
-   if (xd != nullptr)
-   {
-      DO(VecDestroy(&xd), "Problem to destroy xd", comm)
-      xd = nullptr;
-   }
-   if (xdloc != nullptr)
-   {
-      DO(VecDestroy(&xdloc), "Problem to destroy xdloc", comm)
-      xdloc = nullptr;
-   }
-   if (xq != nullptr)
-   {
-      DO(VecDestroy(&xq), "Problem to destroy xq", comm)
-      xq = nullptr;
-   }
-   computef = nullptr;
-   if (enrich != nullptr)
-   {
-      DO(VecDestroy(&enrich), "Problem to destroy enrich", comm)
-      enrich = nullptr;
-   }
-   if (solver != nullptr)
-   {
-      DO(KSPDestroy(&solver), "Problem to destroy solver", comm)
-      solver = nullptr;
-   }
-   if (scatter2e != nullptr)
-   {
-      DO(VecScatterDestroy(&scatter2e), "Problem to destroy scatter2e", comm)
-      scatter2e = nullptr;
-   }
-}
-void patchMPIDirect::generateProblem(Mat Aff, Vec bf, Vec computef_, MPI_Comm comm, MPI_Comm univ, std::int32_t nbdl,
-                                     std::int32_t bs)
+
+void patchMPIDirect::generateProblem(Mat Aff, Vec bf, Vec computef_, MPI_Comm comm, std::int32_t nbdl, std::int32_t bs)
 {
    assert(state&INIT);
    //cout<<"================================================"<<endl;
@@ -304,7 +258,7 @@ void patchMPIDirect::generateProblem(Mat Aff, Vec bf, Vec computef_, MPI_Comm co
    {
       std::cout << "TODO: cleanning to avoid memory leak has to be donne if generateProblem is called more than once: "
                 << __FILE__ << std::endl;
-      MPI_Abort(MPI_COMM_WORLD, -1);
+      MPI_Abort(comm, -1);
    }
    state ^= PRBSET;
    state ^= PRBSOLVED;
@@ -400,6 +354,7 @@ void patchMPIDirect::generateProblem(Mat Aff, Vec bf, Vec computef_, MPI_Comm co
    DO(KSPSetType(solver,KSPPREONLY), "Problem while setting solver type", comm)
    PC pc;
    DO(KSPGetPC(solver, &pc), "Problem while getting PC", comm)
+   //DO(PCSetType(pc, PCCHOLESKY), "Problem while setting PC type", comm)
    DO(PCSetType(pc, PCLU), "Problem while setting PC type", comm)
    DO(PCFactorSetMatSolverType(pc, MATSOLVERMUMPS), "Problem while setting PCLU type", comm)
 
@@ -428,7 +383,7 @@ void patchMPIDirect::generateProblem(Mat Aff, Vec bf, Vec computef_, MPI_Comm co
    // change state
    state |= PRBSET;
 }
-void patchMPIDirect::solveProblem(Vec xf, MPI_Comm comm, MPI_Comm univ, std::int32_t bs)
+void patchMPIDirect::solveProblem(Vec xf, MPI_Comm comm, std::int32_t bs)
 {
    assert(state&PRBSET);
    state ^= PRBSOLVED;
@@ -498,7 +453,7 @@ void patchMPIDirect::solveProblem(Vec xf, MPI_Comm comm, MPI_Comm univ, std::int
 }
 void patchMPIDirect::setPETSETState() { state |= PETSET; }
 bool patchMPIDirect::getPETSETState() { return state & PETSET; }
-void patchMPIDirect::grabPatchSolution(Vec xf, MPI_Comm comm, MPI_Comm univ)
+void patchMPIDirect::grabPatchSolution(Vec xf, MPI_Comm comm)
 {
    assert(state&PRBSOLVED);
    //cout<<"================================================"<<endl;
@@ -527,65 +482,33 @@ namespace twoscale_dolfinx
 template <>
 patchManager<twoscale::patchMPIDirect>::patchManager(std::vector<twoscale::patchMPIDirect *> &&patches_, std::int32_t nbdl_,
                                                      std::int32_t bs_d_, MPI_Comm comm_)
-    : patches(std::move(patches_)), comm(comm_), nbdl(nbdl_), bs_d(bs_d_), dummy_patch(nullptr), computef(nullptr)
+    : patches(std::move(patches_)), comm(comm_), nbdl(nbdl_), bs_d(bs_d_), computef(nullptr)
 {
-   // generate a dummy patch to satisfy petsc collective operation
-   std::vector<PetscInt> dofs_, ddofs_, dofs_to_exchange_, ddofs_to_exchange_;
-   std::vector<int> remotes_;
-   dummy_patch = static_cast<void *>(new twoscale::patchMPIDirect(-1, -1, twoscale::patch::patchState::DUMMY, std::move(dofs_),
-                                                              std::move(dofs_to_exchange_), std::move(ddofs_),
-                                                              std::move(ddofs_to_exchange_), -1, std::move(remotes_)));
 }
 template <>
 patchManager<twoscale::patchMPIDirect>::~patchManager()
 {
    std::cout << "in ~patchManager" << std::endl;
-   auto it = patches.begin();
-   for (int i_seq = 0; i_seq < nb_totg; ++i_seq)
+   for (auto patch : patches)
    {
-      if (dist_com[i_seq] != MPI_COMM_NULL)
-      {
-         twoscale::patchMPIDirect *patch = *it;
-         patch->clear(comm, dist_com[i_seq]);
-         delete patch;
-         ++it;
-      }
-      /*
-       *
-       * ??? work without that ?????
-       * 
-       *
-      // no patch for this sequence but collective operation need to be done
-      else
-      {
-         (static_cast<twoscale::patchMPIDirect *>(dummy_patch))->clear(comm, MPI_COMM_SELF);
-      }
-      */
+      patch->clear(comm);
+      delete patch;
    }
-   if (computef != nullptr)
-   {
-      DO(VecDestroy(&computef), "Problem to destroy computef", comm)
-      computef = nullptr;
-   }
+   DESTROYPETSC(Vec,computef,comm)
 
-   if (dummy_patch) delete static_cast<twoscale::patchMPIDirect *>(dummy_patch);
 }
 template <>
 patchManager<twoscale::patchMPIDirect>::patchManager(const patchManager<twoscale::patchMPIDirect> &other)
-    : comm(other.comm), nbdl(other.nbdl), bs_d(other.bs_d), dummy_patch(nullptr)
+    : comm(other.comm), nbdl(other.nbdl), bs_d(other.bs_d)
 {
    std::cout<<"in patchManager copy constructor"<<std::endl;
-   assert(0); // need to be tested
-   // generate a dummy patch to satisfy petsc collective operation
-   // simple but a heap copy would make more sens as it alleviate this dirty copy of source  => TODO
-   std::vector<PetscInt> dofs_, ddofs_, dofs_to_exchange_, ddofs_to_exchange_;
-   std::vector<int> remotes_;
-   dummy_patch = static_cast<void *>(new twoscale::patchMPIDirect(-1, -1, twoscale::patch::patchState::DUMMY, std::move(dofs_),
-                                                              std::move(dofs_to_exchange_), std::move(ddofs_),
-                                                              std::move(ddofs_to_exchange_), -1, std::move(remotes_)));
+   MPI_Abort(comm,-1); // need to be tested
+
    // copy other patches into new instance stored in 'patches' 
    patches.clear();
+   patches.reserve(other.patches.size());
    for (auto *p : other.patches) patches.push_back(new twoscale::patchMPIDirect(*p));
+
 }
 template <>
 patchManager<twoscale::patchMPIDirect>::patchManager(patchManager<twoscale::patchMPIDirect> &&other)
@@ -593,8 +516,6 @@ patchManager<twoscale::patchMPIDirect>::patchManager(patchManager<twoscale::patc
       comm(std::move(other.comm)),
       nbdl(std::exchange(other.nbdl, 0)),
       bs_d(std::exchange(other.bs_d, 0)),
-      nb_totg(std::exchange(other.nb_totg, 0)),
-      dummy_patch(std::exchange(other.dummy_patch, nullptr)),
       computef(std::exchange(other.computef, nullptr))
 {
    std::cout<<"in patchManager move constructor "<<other.patches.size()<<" "<<patches.size()<<std::endl;
@@ -622,31 +543,20 @@ void patchManager<twoscale::patchMPIDirect>::generateProblems(Mat Aff, Vec bf)
    // create computef based on bf to exchange solution
    DO(VecDuplicate(bf, &computef), "Problem while creating  computef", comm)
 
-   auto it = patches.begin();
-   for (int i_seq = 0; i_seq < nb_totg; ++i_seq)
+      
+   int i_seq = 0;
+   for (auto patch : patches)
    {
-      if (dist_com[i_seq] != MPI_COMM_NULL)
-      {
-         twoscale::patchMPIDirect *patch = *it;
-         patch->i_seq=i_seq;
-         //cout << endl << "i_seq " << i_seq << " generate" << endl;
-         //patch->print();
-         patch->initPatchForComm(comm, dist_com[i_seq]);
-         patch->generateProblem(Aff, bf, computef, comm, dist_com[i_seq], nbdl, bs_d);
-         ++it;
-      }
-      // no patch for this sequence but collective operation need to be done
-      else
-      {
-         //cout << endl << "i_seq " << i_seq << " generate" << endl << "No patch" << endl;
-         (static_cast<twoscale::patchMPIDirect *>(dummy_patch))->initPatchForComm(comm, MPI_COMM_SELF);
-         (static_cast<twoscale::patchMPIDirect *>(dummy_patch))
-             ->generateProblem(Aff, bf, computef, comm, MPI_COMM_SELF, nbdl, bs_d);
-      }
+      patch->i_seq = i_seq;
+      // cout << endl << "i_seq " << i_seq << " generate" << endl;
+      // patch->print();
+      patch->initPatchForComm(comm);
+      patch->generateProblem(Aff, bf, computef, comm, nbdl, bs_d);
+      ++i_seq;
 
+      // TODO: check if this is mandatory
       MPI_Barrier(comm);
    }
-   
 }
 template <>
 void patchManager<twoscale::patchMPIDirect>::solveProblems(Vec xf)
@@ -660,23 +570,12 @@ void patchManager<twoscale::patchMPIDirect>::solveProblems(Vec xf)
 
    //VecView(xf, PETSC_VIEWER_STDOUT_(comm));
 
-   auto it = patches.begin();
-   for (int i_seq = 0; i_seq < nb_totg; ++i_seq)
+   //int i_seq = 0;
+   for (auto patch : patches)
    {
-      if (dist_com[i_seq] != MPI_COMM_NULL)
-      {
-         twoscale::patchMPIDirect *patch = *it;
-         //cout<<endl<<"i_seq "<<i_seq<<" solve"<<endl;
-         //patch->print();
-         patch->solveProblem(xf, comm, dist_com[i_seq],  bs_d);
-         ++it;
-      }
-      // no patch for this sequence but collective operation need to be done
-      else
-      {
-         //cout << endl << "i_seq " << i_seq << " solve" << endl << "No patch" << endl;
-         (static_cast<twoscale::patchMPIDirect *>(dummy_patch))->solveProblem(xf, comm, MPI_COMM_SELF, bs_d);
-      }
+      // cout << endl << "i_seq " << i_seq++ << " solve" << endl ;
+      // patch->print();
+      patch->solveProblem(xf, comm,  bs_d);
 
       // TODO check that syncronization is mandatory. A priori no ....
       MPI_Barrier(comm);
@@ -686,32 +585,13 @@ void patchManager<twoscale::patchMPIDirect>::solveProblems(Vec xf)
 template <>
 std::int32_t patchManager<twoscale::patchMPIDirect>::grabPatchSolution(std::int32_t seq, Vec xf)
 {
-   assert(seq<nb_totg);
-   auto it = patches.begin();
-   // durty !!! loop before seq to update it !!!! In future patches should be reshaped by adding dummy_patch to any sequence with null_com and
-   // dist_com should be update with MPI_COMM_SELF instead of null comm or dist_com transfered to patches TODO
-   int i_seq = 0;
-   for (; i_seq < seq; ++i_seq)
-      if (dist_com[i_seq] != MPI_COMM_NULL) ++it;
+   assert(seq<patches.size());
+   twoscale::patchMPIDirect *patch = patches[seq];
 
-   std::int32_t n_id;
-   if (dist_com[i_seq] != MPI_COMM_NULL)
-   {
-      twoscale::patchMPIDirect *patch = *it;
-      //cout << endl << "i_seq " << i_seq << " grab" << endl;
-      //patch->print();
-      patch->grabPatchSolution(xf, comm, dist_com[i_seq]);
-      n_id=patch->getSID();
-   }
-   // no patch for this sequence but collective operation need to be done
-   else
-   {
-      //cout << endl << "i_seq " << i_seq << " grab" << endl << "No patch" << endl;
-      (static_cast<twoscale::patchMPIDirect *>(dummy_patch))->grabPatchSolution(xf, comm, MPI_COMM_SELF);
-      n_id=-1;
-   }
+   //patch->print();
+   patch->grabPatchSolution(xf, comm);
 
-   return n_id;
+   return patch->getSID();
 }
 // local function used in sortPatches method
 void setColor(twoscale::patchMPIDirect *patch, std::int64_t *trans_table, int proc_id)
@@ -750,9 +630,11 @@ void patchManager<twoscale::patchMPIDirect>::sortPatches()
    int tag_trans = 1;
    int tag_max = 2;
    int tag_weight = 3;
+   int nb_dist;
    double ratiol = 0.;
    float max_w = 0.;
    float weight = 0.;
+   std::vector<MPI_Comm> dist_com;
    int pid;
    MPI_Comm_rank(comm, &pid);
    int nbproc;
@@ -1017,7 +899,7 @@ void patchManager<twoscale::patchMPIDirect>::sortPatches()
                   else
                   {
                      *tc = MPI_UNDEFINED;
-                     if (debug) cout << "no front";
+                     if (debug) cout << "no front"<<endl;
                   }
                }
             }
@@ -1077,14 +959,15 @@ void patchManager<twoscale::patchMPIDirect>::sortPatches()
 
    // communicator container resizing
    int nb_tot = (nb_dist > nb_patch) ? nb_dist : nb_patch;
-   nb_totg = nb_tot;
+   int nb_totg = nb_tot;
    MPI_Allreduce(MPI_IN_PLACE, &nb_totg, 1, MPI_INT, MPI_MAX, comm);
    dist_com.resize(nb_totg, MPI_COMM_NULL);
 
    // loop to set communicator according to color
+   auto it = patches.begin();
    for (int i_seq = 0; i_seq < nb_totg; ++i_seq)
    {
-      // create spited communicator using patch id (i.e. enriched id) as color
+      // create splited communicator using patch id (i.e. enriched id) as color
       if (i_seq < nb_dist)
       {
          if (debug) cout << "proc " << pid << " i_seq " << i_seq << " color " << trans_color[i_seq * trans_size] << endl;
@@ -1095,18 +978,54 @@ void patchManager<twoscale::patchMPIDirect>::sortPatches()
          // remaining patch are local ones and are treated locally
          if (i_seq < nb_tot) dist_com[i_seq] = MPI_COMM_SELF;
       }
+      // if the current sequence involve a patch set its comunicator
+      if (dist_com[i_seq] != MPI_COMM_NULL) (*(it++))->setUniv(dist_com[i_seq]);
    }
+
+   // Add to 'paches' dummy patches when sequence impose that no patch get computed for a sequence
+   // Those extra dummy patches are mandatory to fulfill some PETSc collective operation requirements on comm communicator.
+   // Only do something if some sequence don't use this proc
+   int nb_null=nb_totg-patches.size();
+   if (nb_null)
+   {
+      // reserve patches size according to dummy patch that are going to be added
+      patches.reserve(nb_totg);
+
+      // loop on comunicator to identify where to add dummy patch
+      auto it = patches.begin();
+      for (int i_seq = 0; i_seq < nb_totg; ++i_seq)
+      {
+         if (dist_com[i_seq] != MPI_COMM_NULL) ++it;
+         // no patch for this sequence but collective operation need to be done so we create a dummy patch that we insert in the
+         // patch vector
+         else
+         {
+            // generate a dummy patch to satisfy petsc collective operation
+            std::vector<PetscInt> dofs_, ddofs_, dofs_to_exchange_, ddofs_to_exchange_;
+            std::vector<int> remotes_;
+            it = patches.insert(it, new twoscale::patchMPIDirect(-1, -1, twoscale::patch::patchState::DUMMY, std::move(dofs_),
+                                                                 std::move(dofs_to_exchange_), std::move(ddofs_),
+                                                                 std::move(ddofs_to_exchange_), -1, std::move(remotes_)));
+
+            // set communicator to MPI_COMM_SELF as dummy will be treated as a special local patch
+            (*(it++))->setUniv(MPI_COMM_SELF);
+         }
+      }
+   }
+
+   assert(patches.size() == nb_totg);
 
    // statistic
    cout << "=====================================================================================================================================" << endl;
    cout << "Patches sorting statistic" << endl;
+   cout << " Total number of iterations: " << nb_totg << endl;
    cout << "In this proc: " << endl;
-   cout << " Total number of iterations: " << nb_tot << endl;
    cout << " Total number of sequences(number of patches computed with dependency): " << nb_dist << endl;
-   cout << " Total number of patches:" << nb_patch << endl;
+   cout << " Total number of patches to compute:" << nb_patch << endl;
    int nb_inde = ((nb_dist < nb_patch) ? nb_patch - nb_dist : 0);
    cout << " Total number of patches independent:" << nb_inde << endl;
    cout << " Number of sequence not computing patches:" << ((nb_dist > nb_patch) ? nb_dist - nb_patch : 0) << endl;
+   cout << " Number of iterations not computing patches:" << nb_null << endl;
    cout << "Local performance Ratio (nb of computing sequence/total nb of patch to compute; ideal 1): " << ratiol * nb_tot
         << endl;
    if (nbproc > 1)

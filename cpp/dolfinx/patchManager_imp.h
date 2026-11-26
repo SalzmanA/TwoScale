@@ -18,7 +18,7 @@ namespace twoscale
 {
 template <typename F>
 void patchMPIDirect::PEtUpdate(Mat PEt, std::unordered_map<std::int32_t, twoscale_dolfinx::enrichedDofIDs> &enriched_dof_id,
-                               std::shared_ptr<F> func, MPI_Comm comm, MPI_Comm univ, std::int32_t bs, PetscInt rstart,
+                               std::shared_ptr<F> func, MPI_Comm comm, std::int32_t bs, PetscInt rstart,
                                PetscInt rend)
 {
    // prerequisites
@@ -42,15 +42,6 @@ void patchMPIDirect::PEtUpdate(Mat PEt, std::unordered_map<std::int32_t, twoscal
          IS idxr;
          DO(ISCreateGeneral(comm, PEtJCols.size(), PEtJCols.data(), PETSC_USE_POINTER, &idxr),
             "problem while creating row idx (comm)", comm)
-         // TODO
-         // if (scatter2e!=null) VecScatterDestroy is not possible as it is a collective operation
-         // transform scatter2e as vector of VecScatter so that for all patch only one VecScatter is present
-         // and for dummy as many VecScatter are present as there is dummy in sequence.
-         // For now by miracle overwriting scatter2e doesn't seems to make problems. Each dummy is associated with comm which is
-         // stable but the forest is not the same in between sequence. The fact that dummy do not provide trees in the forest is
-         // certainly what makes things working. Nevertheless at each sequence with dummy there is a memory leak as previous
-         // scatter2e local instance is not cleaned !!
-         std::cout << "dummy scatter2e  memory leak !!!!" << scatter2e << std::endl;
          DO(VecScatterCreate(computef, idxr, enrich, nullptr, &scatter2e), "Problem while creating  dummy scatter2e", comm)
 
          //std::cout << "idxr " << std::endl;
@@ -172,9 +163,10 @@ void patchMPIDirect::PEtUpdate(Mat PEt, std::unordered_map<std::int32_t, twoscal
          }
          PEtJCols.resize(PEtJCols.size() / bs);
 
-         // change state
-         state |= PETSET;
       }
+
+      // change state
+      state |= PETSET;
    }
 
    // transfert patch solution to computef buffer
@@ -233,6 +225,8 @@ void patchMPIDirect::PEtUpdate(Mat PEt, std::unordered_map<std::int32_t, twoscal
 
       if (eliminated_coarse_encoding)
       {
+         // TODO: missiging macro for matnest or not? To check
+
          // set new row values only for non eliminated rows
          PetscInt idrb = idr;
          for (std::int32_t b = 0; b < bs; ++b)
@@ -311,7 +305,7 @@ void patchManager<P>::PEtUpdate(Mat PEt, std::unordered_map<std::int32_t, twosca
 template <typename P>
 int patchManager<P>::numberOfSequence()
 {
-   return nb_totg;
+   return patches.size();
 }
 template <typename P>
 std::int32_t patchManager<P>::grabPatchSolution(std::int32_t seq, Vec xf)
@@ -358,37 +352,25 @@ void patchManager<twoscale::patchMPIDirect>::PEtUpdate(Mat PEt, std::unordered_m
    PetscInt rstart, rend;
    DO(MatGetOwnershipRange(PEt, &rstart, &rend), "Problem while retrieving PEt owner range", comm)
 
-   // By looking if dummy patch is in PETSET mode or not the LAST or INTERMEDIATE strategy can be
-   // chosen. If PETSET is set for this dummy patch it means that at least on call to this function
+   // By looking if the first patch (by construction all proc get at least one patch) is in PETSET mode or not the LAST or
+   // INTERMEDIATE strategy can be chosen. If PETSET is set for this patch it means that at least on call to this function
    // has been done and thus all PEt coefficiant are transfered into patches PEtXXCols vectors:
    // * INTERMEDIATE is mandatory in the loop when this method is called for the first time and
    //   PEt coefficiant are transfered into PEtXXCols using MatGetRow which requires that PEt
    //   is in FINAL assembly mode
    // * LAST can be use in next call to this method as MatGetRow in not called anymore. The final
-   //   assembly is donne at the end of the loop merging all modified rows per all sequence at once 
+   //   assembly is donne at the end of the loop merging all modified rows per all sequence at once
    //
-   bool do_last=(static_cast<twoscale::patchMPIDirect *>(dummy_patch))->getPETSETState();
+   bool do_last=(patches.front())->getPETSETState();
 
-   auto it = patches.begin();
-   for (int i_seq = 0; i_seq < nb_totg; ++i_seq)
+   //int i_seq = 0;
+   for (auto patch : patches)
    {
-      if (dist_com[i_seq] != MPI_COMM_NULL)
-      {
-         twoscale::patchMPIDirect *patch = *it;
-         //std::cout<<std::endl<<"i_seq "<<i_seq<<" PEt"<<std::endl;
-         //patch->print();
-         patch->PEtUpdate(PEt, enriched_dof_id, func, comm, dist_com[i_seq], bs_d, rstart, rend);
-         ++it;
-      }
-      // no patch for this sequence but collective operation need to be done
-      // As dummy is call many times it state is controled from this method
-      else
-      {
-         //std::cout << std::endl << "i_seq " << i_seq << " PEt" << std::endl << "No patch" << std::endl;
-         (static_cast<twoscale::patchMPIDirect *>(dummy_patch))
-             ->PEtUpdate(PEt, enriched_dof_id, func, comm, MPI_COMM_SELF, bs_d, rstart, rend);
-      }
+      // std::cout<<std::endl<<"i_seq "<<i_seq++<<" PEt"<<std::endl;
+      // patch->print();
+      patch->PEtUpdate(PEt, enriched_dof_id, func, comm, bs_d, rstart, rend);
 
+      // TODO ??
       MPI_Barrier(comm);
 
       // INTERMEDIATE strategy
@@ -399,7 +381,6 @@ void patchManager<twoscale::patchMPIDirect>::PEtUpdate(Mat PEt, std::unordered_m
          DO(MatAssemblyBegin(PEt, MAT_FINAL_ASSEMBLY), "PEt begin assembly operator", comm)
          DO(MatAssemblyEnd(PEt, MAT_FINAL_ASSEMBLY), "PEt end assembly operator", comm)
       }
-
    }
 
    // if LAST strategy is used, after the loop full assembly is required
@@ -408,12 +389,6 @@ void patchManager<twoscale::patchMPIDirect>::PEtUpdate(Mat PEt, std::unordered_m
       DO(MatAssemblyBegin(PEt, MAT_FINAL_ASSEMBLY), "PEt begin assembly operator", comm)
       DO(MatAssemblyEnd(PEt, MAT_FINAL_ASSEMBLY), "PEt end assembly operator", comm)
    }
-
-   // Force dummy state to PETSET after the loop so that in next call to this method all patch are in same state
-   // and collective operation remain synchronized.
-   // Logically a test should look if PETSET is not set for dummy and set it only in this case 
-   // But always set it, certainnely cost the same.
-   (static_cast<twoscale::patchMPIDirect *>(dummy_patch))->setPETSETState();
 
 #ifdef TWOSCALE_OUTPUT_MATVECT
    PetscViewer PET_viewer;

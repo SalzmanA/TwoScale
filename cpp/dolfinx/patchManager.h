@@ -52,7 +52,6 @@ class patch
    /// Function that gives secondary patch id (an id related to patch id some how but not necessarily equals to it) 
    std::int32_t getSID() const;
    std::span<const int> getRemote() const;
-   void initPatchForComm(MPI_Comm comm, MPI_Comm univ);
 
    bool isDist() const;
    float getWeight() const;
@@ -85,7 +84,7 @@ class patchMPIDirect : public patch
                   std::vector<PetscInt> &&Diri_dofs_to_exchange_, int owner_, std::vector<int> &&remotes_);
    ~patchMPIDirect();
    /// Function that generate patch system of equation using given fine scale system
-   void generateProblem(Mat Aff, Vec bf, Vec computf_, MPI_Comm comm, MPI_Comm univ, std::int32_t nbdl, std::int32_t bs);
+   void generateProblem(Mat Aff, Vec bf, Vec computf_, MPI_Comm comm, std::int32_t nbdl, std::int32_t bs);
    /// Function that update \f$PE^t\f$ terms relate to this patch (object) based on current solution of this patch system
    /// The first time this method is called the \f$PE^t\f$ rows associated to this patch are copied in internal storage so that
    /// during next calls updating can be done using this storage as \f$PE^t\f$ no longer contains interpolation coefficients but
@@ -96,23 +95,24 @@ class patchMPIDirect : public patch
    /// this patch and the fine dofs related to enriched node
    /// @param[in] func Functor to transform field solution of this patch problem into enrichment function
    /// @param[in] comm General communicator on which coarse/fine meshes are distributed
-   /// @param[in] univ Communicator on which this patch is distributed
    /// @param[in] bs Block size supposed to be the same for coarse and fine field 
    /// @param[in] rstart First row of \f$PE^t\f$ stored in this proc
    /// @param[in] rend Past the last row of \f$PE^t\f$ stored in this proc
    template <typename F>
    void PEtUpdate(Mat PEt, std::unordered_map<std::int32_t, twoscale_dolfinx::enrichedDofIDs> &enriched_dof_id,
-                  std::shared_ptr<F> func, MPI_Comm comm, MPI_Comm univ, std::int32_t bs, PetscInt rstart, PetscInt rend);
+                  std::shared_ptr<F> func, MPI_Comm comm, std::int32_t bs, PetscInt rstart, PetscInt rend);
    /// Solve problem for this patch
    /// @param[in] xf Petsc Vector storing fine field solution approximation (from last TwoScale Loop for example)
    /// @param[in] comm General communicator on which coarse/fine meshes are distributed
-   /// @param[in] univ Communicator on which this patch is distributed
    /// @param[in] bs Block size supposed to be the same for coarse and fine field 
-   void solveProblem(Vec xf, MPI_Comm comm, MPI_Comm univ, std::int32_t bs);
+   void solveProblem(Vec xf, MPI_Comm comm, std::int32_t bs);
    void setPETSETState();
    bool getPETSETState();
-   void grabPatchSolution(Vec xf, MPI_Comm comm, MPI_Comm univ);
-   void clear(MPI_Comm comm, MPI_Comm univ);
+   void grabPatchSolution(Vec xf, MPI_Comm comm);
+   /// Set communicator for this patch (i.e. group of process on which patch is spanned)
+   void setUniv(const MPI_Comm &univ_);
+   void clear(MPI_Comm comm );
+   void initPatchForComm(MPI_Comm comm);
 
   private:
    IS idxqf,idxdf;
@@ -126,6 +126,7 @@ class patchMPIDirect : public patch
    std::int32_t idx_dof_f_enriched;
    std::int64_t eliminated_coarse_encoding;
    VecScatter scatter2e;
+   MPI_Comm univ;
 };
 /// variant to implement
 /// patchMPIMagma use Magma or any GPU solver for patch resolution. All patch must use GPU
@@ -228,13 +229,6 @@ class patchManager
    std::vector<P *> patches;
    MPI_Comm comm;
    std::int32_t nbdl, bs_d;
-
-   // specific to distributed patch
-   int nb_dist, nb_totg;
-   std::vector<MPI_Comm> dist_com;
-
-   // dummy patch
-   void *dummy_patch;
 
    // vector used has a buffer to collect solutions from the patches
    // of one sequence, all at once. This buffer can then be used to 
